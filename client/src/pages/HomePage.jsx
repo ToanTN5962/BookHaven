@@ -56,8 +56,8 @@ const Hero = () => (
   </div>
 );
 
-const BookCard = ({ title, author, rating, isFeatured }) => (
-  <div className={`group p-4 rounded-2xl transition-all duration-300 ${isFeatured ? 'bg-white shadow-xl ring-1 ring-gray-100 scale-105' : 'hover:bg-white hover:shadow-lg'}`}>
+const BookCard = ({ title, author, rating }) => (
+  <div className={`group p-4 rounded-2xl transition-all duration-300 `}>
     <div className="relative aspect-[2/3] mb-4 overflow-hidden rounded-lg shadow-md">
       <div className="w-full h-full bg-gray-200 animate-pulse group-hover:scale-110 transition-transform duration-500">
         {/* Placeholder cho ảnh sách */}
@@ -72,23 +72,25 @@ const BookCard = ({ title, author, rating, isFeatured }) => (
       </div>
       <h3 className="font-bold text-gray-800 line-clamp-1">{title}</h3>
       <p className="text-xs text-gray-500 mb-4">{author}</p>
+
       
-      {isFeatured && (
-        <button className="w-full flex items-center justify-center gap-2 py-2 bg-yellow-300 text-gray-900 text-sm font-bold rounded-full hover:bg-yellow-400 transition-colors">
-          <Plus size={16} /> Add to wishlist
+    </div>
+    <div className="relative text-center opacity-0 group-hover:opacity-100 transition-opacity">
+      <button className = "bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-lg">
+          + Add to wishlist
         </button>
-      )}
     </div>
   </div>
 );
 
 const Highlights = () => {
   const books = [
-    { title: "You did nothing wrong", author: "C. G. Drews", rating: 4, featured: true },
+    { title: "You did nothing wrong", author: "C. G. Drews", rating: 4 },
     { title: "Everyone in this bank...", author: "Benjamin Stevenson", rating: 4 },
     { title: "Innamorata", author: "Ava Reid", rating: 5 },
     { title: "Under Water", author: "Tara Menon", rating: 4 },
     { title: "The Plans I Have For You", author: "Lai Sanders", rating: 4 },
+    { title: "Call Me By Your Name", author: "Lai Sanders", rating: 4 },
   ];
 
   return (
@@ -102,8 +104,7 @@ const Highlights = () => {
             key={idx} 
             title={book.title} 
             author={book.author} 
-            rating={book.rating} 
-            isFeatured={book.featured}
+            rating={book.rating}
           />
         ))}
       </div>
