@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, ShoppingCart, ChevronDown, Star, Plus } from 'lucide-react';
+import { Search, ShoppingCart, ChevronDown, ChevronLeft, ChevronRight, Star, Plus } from 'lucide-react';
 
 const Navbar = () => (
   <nav className="flex items-center justify-between px-8 py-4 bg-white border-b border-gray-100">
@@ -57,7 +57,7 @@ const Hero = () => (
 );
 
 const BookCard = ({ title, author, rating }) => (
-  <div className={`group p-4 rounded-2xl transition-all duration-300 `}>
+  <div className={`group p-4 rounded-2xl transition-all duration-300 hover:bg-white hover:shadow-2xl hover:scale-105`}>
     <div className="relative aspect-[2/3] mb-4 overflow-hidden rounded-lg shadow-md">
       <div className="w-full h-full bg-gray-200 animate-pulse group-hover:scale-110 transition-transform duration-500">
         {/* Placeholder cho ảnh sách */}
@@ -78,7 +78,7 @@ const BookCard = ({ title, author, rating }) => (
     <div className="relative text-center opacity-0 group-hover:opacity-100 transition-opacity">
       <button className = "bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-lg">
           + Add to wishlist
-        </button>
+      </button>
     </div>
   </div>
 );

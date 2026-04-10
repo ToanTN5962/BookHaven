@@ -1,4 +1,9 @@
 {
+  "main": "server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js"
+  },
   "dependencies": {
     "@prisma/adapter-mariadb": "^7.5.0",
     "@prisma/client": "^7.5.0",

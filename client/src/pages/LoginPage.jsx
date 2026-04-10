@@ -1,0 +1,89 @@
+import React from 'react';
+import { Mail, Lock, ArrowRight } from 'lucide-react';
+
+const LoginPage = () => {
+  return (
+    // Toàn bộ màn hình với màu nền nhạt giống Homepage
+    <div className="min-h-screen bg-[#fafafa] flex items-center justify-center p-6">
+      
+      {/* Container chính: Bo góc lớn và đổ bóng sâu */}
+      <div className="max-w-md w-full bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100">
+        
+        {/* Phần Header của Form */}
+        <div className="p-8 pb-0">
+          <h1 className="text-3xl font-bold text-gray-900 tracking-tight mb-2">
+            Welcome back<span className="text-indigo-600">!</span>
+          </h1>
+          <p className="text-gray-500">Please log in to continue!</p>
+        </div>
+
+        <div className="p-8">
+          <form className="space-y-5">
+            {/* Trường Email */}
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-gray-700 ml-1">Email</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Mail size={18} className="text-gray-400 group-focus-within:text-indigo-500 transition-colors" />
+                </div>
+                <input 
+                  type="email" 
+                  placeholder="name@example.com"
+                  className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-indigo-400 focus:bg-white outline-none transition-all"
+                />
+              </div>
+            </div>
+
+            {/* Trường Password */}
+            <div className="space-y-2">
+              <div className="flex justify-between items-center px-1">
+                <label className="text-sm font-semibold text-gray-700">Password</label>
+                <a href="#" className="text-xs font-bold text-indigo-600 hover:underline underline-offset-4">
+                  Forgot password?
+                </a>
+              </div>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Lock size={18} className="text-gray-400 group-focus-within:text-indigo-500 transition-colors" />
+                </div>
+                <input 
+                  type="password" 
+                  placeholder="••••••••"
+                  className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-indigo-400 focus:bg-white outline-none transition-all"
+                />
+              </div>
+            </div>
+
+            {/* Nút Đăng nhập - Sử dụng màu Yellow của Hero Section để nổi bật */}
+            <button className="w-full py-4 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-bold rounded-2xl shadow-lg shadow-yellow-200 transform hover:scale-[1.02] transition-all flex items-center justify-center gap-2 mt-4">
+              Log in <ArrowRight size={20} />
+            </button>
+          </form>
+
+          {/* Đường kẻ ngang ngăn cách */}
+          <div className="relative my-8 text-center">
+            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-100"></div></div>
+            <span className="relative px-4 bg-white text-gray-400 text-sm">Or</span>
+          </div>
+
+          {/* Đăng nhập bằng bên thứ 3 (Github chẳng hạn) */}
+          {/* <button className="w-full py-3 bg-white border border-gray-200 text-gray-700 font-medium rounded-2xl hover:bg-gray-50 transition-colors flex items-center justify-center gap-2">
+            <Github size={20} /> Github
+          </button> */}
+        </div>
+
+        {/* Phần Footer: Chuyển hướng sang Đăng ký */}
+        <div className="p-6 bg-gray-50 text-center border-t border-gray-100">
+          <p className="text-gray-600">
+            Haven't had an account yet?{' '}
+            <a href="#" className="text-indigo-600 font-bold hover:underline underline-offset-4">
+              Sign up
+            </a>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default LoginPage;
