@@ -1,7 +1,63 @@
 import React from 'react';
+import {useState} from 'react';
 import { Mail, Lock, ArrowRight } from 'lucide-react';
 
 const LoginPage = () => {
+
+  const [formData, setFormData] = useState({
+    email:'',
+    password:''
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleChange = (e) => {
+    setFormData({
+      ...formData, [e.target.name]: e.target.value
+    });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    if(!formData.email.includes('@')){
+      setError('Invalid email!');
+      return;
+    }
+    
+    if(formData.password.length < 6){
+      setError('Password must be at least 6 characters long.');
+      return;
+    }
+
+    try {
+      console.log("Sending data: ", formData);
+
+      const response = await fetch('http://localhost:3000/api/auth/login',{
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({email, password})
+      });
+
+      const data = await response.json();
+
+      if(response.ok){
+        alert("Login successfully!");
+      }
+      else{
+        alert(data.message || "Login failed!");
+      }
+    }
+    catch(error) {
+      console.error("Error: ", error);
+    }
+    finally {
+      setLoading(false);
+    }
+
+  };
+
   return (
     // Toàn bộ màn hình với màu nền nhạt giống Homepage
     <div className="min-h-screen bg-[#fafafa] flex items-center justify-center p-6">
@@ -12,13 +68,13 @@ const LoginPage = () => {
         {/* Phần Header của Form */}
         <div className="p-8 pb-0">
           <h1 className="text-3xl font-bold text-gray-900 tracking-tight mb-2">
-            Welcome back<span className="text-indigo-600">!</span>
+            Welcome back!
           </h1>
           <p className="text-gray-500">Please log in to continue!</p>
         </div>
 
         <div className="p-8">
-          <form className="space-y-5">
+          <form className="space-y-5" onSubmit={handleSubmit}>
             {/* Trường Email */}
             <div className="space-y-2">
               <label className="text-sm font-semibold text-gray-700 ml-1">Email</label>
@@ -27,7 +83,11 @@ const LoginPage = () => {
                   <Mail size={18} className="text-gray-400 group-focus-within:text-indigo-500 transition-colors" />
                 </div>
                 <input 
+                  name="email"
                   type="email" 
+                  required
+                  onChange={handleChange}
+                  value={formData.email}
                   placeholder="name@example.com"
                   className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-indigo-400 focus:bg-white outline-none transition-all"
                 />
@@ -47,7 +107,11 @@ const LoginPage = () => {
                   <Lock size={18} className="text-gray-400 group-focus-within:text-indigo-500 transition-colors" />
                 </div>
                 <input 
+                  name="password"
                   type="password" 
+                  required
+                  onChange={handleChange}
+                  value={formData.password}
                   placeholder="••••••••"
                   className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-indigo-400 focus:bg-white outline-none transition-all"
                 />
@@ -55,8 +119,8 @@ const LoginPage = () => {
             </div>
 
             {/* Nút Đăng nhập - Sử dụng màu Yellow của Hero Section để nổi bật */}
-            <button className="w-full py-4 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-bold rounded-2xl shadow-lg shadow-yellow-200 transform hover:scale-[1.02] transition-all flex items-center justify-center gap-2 mt-4">
-              Log in <ArrowRight size={20} />
+            <button type="submit" disabled={loading} className="w-full py-4 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-bold rounded-2xl shadow-lg shadow-yellow-200 transform hover:scale-[1.02] transition-all flex items-center justify-center gap-2 mt-4">
+              {loading ? "Please wait..." : "Log in" }<ArrowRight size={20} />
             </button>
           </form>
 
@@ -66,7 +130,7 @@ const LoginPage = () => {
             <span className="relative px-4 bg-white text-gray-400 text-sm">Or</span>
           </div>
 
-          {/* Đăng nhập bằng bên thứ 3 (Github chẳng hạn) */}
+          {/* Đăng nhập bằng bên thứ 3 */}
           {/* <button className="w-full py-3 bg-white border border-gray-200 text-gray-700 font-medium rounded-2xl hover:bg-gray-50 transition-colors flex items-center justify-center gap-2">
             <Github size={20} /> Github
           </button> */}
