@@ -35,10 +35,21 @@ const SignUpPage = () => {
     setLoading(true);
     try {
       console.log("Registering user:", formData);
-      // Gọi API register của bạn ở đây
-      // const response = await fetch('/api/auth/register', { ... })
+      const response = await fetch("http://localhost:3000/api/auth/signup", {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(formData)
+      });
+
+      const data = await response.json();
       
-      alert("Account created successfully!");
+      if(response.ok){
+        alert("Account created successfully!");
+      }
+      else{
+        alert(data.message || "Login failed!");
+      }
+      
     } catch (err) {
       setError("Something went wrong. Please try again.");
     } finally {
