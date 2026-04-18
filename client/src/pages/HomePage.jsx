@@ -1,36 +1,41 @@
 import React from 'react';
+import {useNavigate} from 'react-router-dom'
 import { Search, ShoppingCart, ChevronDown, ChevronLeft, ChevronRight, Star, Plus } from 'lucide-react';
 
-const Navbar = () => (
-  <nav className="flex items-center justify-between px-8 py-4 bg-white border-b border-gray-100">
-    <div className="flex items-center gap-8">
-      <h1 className="text-2xl font-bold text-indigo-600 tracking-tight">BOOKHAVEN</h1>
-      <div className="hidden md:flex gap-6 text-gray-600 font-medium">
-        <a href="#" className="flex items-center gap-1 hover:text-indigo-600">Home <ChevronDown size={16} /></a>
-        <a href="#" className="flex items-center gap-1 hover:text-indigo-600">Pages <ChevronDown size={16} /></a>
-        <a href="#" className="flex items-center gap-1 hover:text-indigo-600">Shop <ChevronDown size={16} /></a>
-        <a href="#" className="hover:text-indigo-600">Contact</a>
-      </div>
-    </div>
-    
-    <div className="flex items-center gap-4 flex-1 max-w-md mx-8">
-      <div className="relative w-full">
-        <input 
-          type="text" 
-          placeholder="Search your favorite book..." 
-          className="w-full pl-4 pr-10 py-2 bg-gray-100 border-none rounded-full focus:ring-2 focus:ring-indigo-400 outline-none transition-all"
-        />
-        <Search className="absolute right-3 top-2.5 text-gray-400" size={18} />
-      </div>
-    </div>
+const Navbar = () => {
+  const navigate = useNavigate();
 
-    <div className="flex items-center gap-4">
-      <button className="px-6 py-2 bg-indigo-600 text-white rounded-full font-semibold hover:bg-indigo-700 transition-colors">
-        Sign In
-      </button>
-    </div>
-  </nav>
-);
+  return(
+    <nav className="flex items-center justify-between px-8 py-4 bg-white border-b border-gray-100">
+      <div className="flex items-center gap-8">
+        <h1 className="text-2xl font-bold text-indigo-600 tracking-tight">BOOKHAVEN</h1>
+        <div className="hidden md:flex gap-6 text-gray-600 font-medium">
+          <a href="#" className="flex items-center gap-1 hover:text-indigo-600">Home <ChevronDown size={16} /></a>
+          <a href="#" className="flex items-center gap-1 hover:text-indigo-600">Pages <ChevronDown size={16} /></a>
+          <a href="#" className="flex items-center gap-1 hover:text-indigo-600">Shop <ChevronDown size={16} /></a>
+          <a href="#" className="hover:text-indigo-600">Contact</a>
+        </div>
+      </div>
+      
+      <div className="flex items-center gap-4 flex-1 max-w-md mx-8">
+        <div className="relative w-full">
+          <input 
+            type="text" 
+            placeholder="Search your favorite book..." 
+            className="w-full pl-4 pr-10 py-2 bg-gray-100 border-none rounded-full focus:ring-2 focus:ring-indigo-400 outline-none transition-all"
+          />
+          <Search className="absolute right-3 top-2.5 text-gray-400" size={18} />
+        </div>
+      </div>
+
+      <div className="flex items-center gap-4">
+        <button className="px-6 py-2 bg-indigo-600 text-white rounded-full font-semibold hover:bg-indigo-700 transition-colors" onClick={() => navigate("/login")}>
+          Log In
+        </button>
+      </div>
+    </nav>
+  );
+};
 
 const Hero = () => (
   <div className="relative overflow-hidden bg-gradient-to-r from-blue-50 to-indigo-50 py-16 px-8">
@@ -47,7 +52,6 @@ const Hero = () => (
       </div>
       
       <div className="md:w-1/2 flex gap-4 mt-12 md:mt-0 perspective-1000">
-        {/* Giả lập các bìa sách đang bay nhẹ */}
         <div className="w-32 h-48 bg-blue-400 rounded shadow-2xl transform -rotate-12 translate-y-4"></div>
         <div className="w-32 h-48 bg-indigo-400 rounded shadow-2xl transform rotate-6 -translate-y-4"></div>
         <div className="w-32 h-48 bg-emerald-400 rounded shadow-2xl transform -rotate-6"></div>

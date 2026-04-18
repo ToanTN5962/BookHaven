@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import {Link} from 'react-router-dom'
 import { Mail, Lock, User, Phone, Calendar, ArrowRight, ChevronDown } from 'lucide-react';
 
 const SignUpPage = () => {
@@ -220,9 +221,9 @@ const SignUpPage = () => {
         <div className="p-6 bg-gray-50 text-center border-t border-gray-100">
           <p className="text-gray-600 text-sm">
             Already have an account?{' '}
-            <a href="/login" className="text-indigo-600 font-bold hover:underline">
+            <Link to="/login" className="text-indigo-600 font-bold hover:underline">
               Log in
-            </a>
+            </Link>
           </p>
         </div>
       </div>
