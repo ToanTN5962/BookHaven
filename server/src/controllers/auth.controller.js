@@ -27,7 +27,7 @@ const signup = async (req, res) => {
                 email, 
                 phoneNum, 
                 password, 
-                dateOfBirth, 
+                dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null, 
                 sex
             }
         }); 

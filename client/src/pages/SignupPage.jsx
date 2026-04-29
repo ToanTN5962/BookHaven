@@ -10,7 +10,7 @@ const SignUpPage = () => {
     password: '',
     confirmPassword: '',
     dateOfBirth: '',
-    sex: 'MALE' // Giá trị mặc định từ Model
+    sex: 'MALE' 
   });
 
   const [loading, setLoading] = useState(false);
@@ -27,7 +27,6 @@ const SignUpPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validation cơ bản
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match!");
       return;
