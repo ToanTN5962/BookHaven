@@ -1,6 +1,6 @@
 import React from 'react';
 import {useState} from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, ArrowRight } from 'lucide-react';
 
 const LoginPage = () => {
@@ -11,6 +11,7 @@ const LoginPage = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const navigate = useNavigate();
 
   const handleChange = (e) => {
     setFormData({
@@ -47,7 +48,12 @@ const LoginPage = () => {
       const data = await response.json();
 
       if(response.ok){
+        localStorage.setItem('token', data.token);
+        if(data.user){
+          localStorage.setItem('userName', data.user.name);
+        }
         alert("Login successfully!");
+        navigate('/afterlogin');
       }
       else{
         alert(data.message || "Login failed!");
