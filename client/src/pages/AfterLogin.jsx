@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Search, Bell, User, ChevronDown, BookOpen, 
@@ -105,9 +105,17 @@ const SidebarBookshelf = () => {
 const DetailedBookCard = ({ book }) => (
   <div className="flex gap-6 bg-white p-5 rounded-3xl border border-gray-100 hover:shadow-xl transition-all group">
     <div className="w-32 h-44 bg-gray-200 rounded-xl overflow-hidden flex-shrink-0 shadow-md">
-       <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gradient-to-br from-gray-100 to-gray-200 group-hover:scale-105 transition-transform">
-         Cover
-       </div>
+      {book.thumbnail ? (
+        <img
+          src={book.thumbnail}
+          alt={book.title}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+        />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gradient-to-br from-gray-100 to-gray-200">
+          No Cover
+        </div>
+      )}
     </div>
     <div className="flex flex-col flex-1">
       <div className="flex justify-between items-start">
@@ -144,15 +152,33 @@ const DetailedBookCard = ({ book }) => (
 
 export default function AfterLoginPage() {
   const [currentPage, setCurrentPage] = useState(1);
+  const [books, setBooks] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock data cho 10 cuốn sách mỗi trang
-  const hotBooks = Array(10).fill({
-    title: "The Radiant Dark",
-    author: "Alexandra Oliva",
-    summary: "Arrival meets Wild Dark Shore in this captivating novel that follows a family for over fifty years—a bold and compassionate exploration of the universe around us and what it truly means to be human...",
-    rating: 4.06,
-    tags: ["Sci-Fi", "Fiction"]
-  });
+  useEffect(() => {
+    const fetchBooks = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch(`http://localhost:3000/api/books/random?page=${currentPage}`);
+        const data = await response.json();
+        setBooks(data.books);
+      } catch (error) {
+        console.error("Error fetching books:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBooks();
+  }, [currentPage]);
+
+  // const hotBooks = Array(10).fill({
+  //   title: "The Radiant Dark",
+  //   author: "Alexandra Oliva",
+  //   summary: "Arrival meets Wild Dark Shore in this captivating novel that follows a family for over fifty years—a bold and compassionate exploration of the universe around us and what it truly means to be human...",
+  //   rating: 4.06,
+  //   tags: ["Sci-Fi", "Fiction"]
+  // });
 
   return (
     <div className="min-h-screen bg-[#fafafa] font-sans text-gray-900">
@@ -185,9 +211,13 @@ export default function AfterLoginPage() {
             </div>
 
             <div className="grid grid-cols-1 gap-6">
-              {hotBooks.map((book, idx) => (
-                <DetailedBookCard key={idx} book={book} />
-              ))}
+              {loading ? (
+                <div className="text-center text-gray-400 py-20">Loading...</div>
+              ) : (
+                books.map((book) => (
+                  <DetailedBookCard key={book.id} book={book} />
+                ))
+              )}
             </div>
 
             {/* Pagination Controls */}
