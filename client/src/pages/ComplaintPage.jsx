@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import SimpleHeader from '../components/SimpleHeader';
 import { AlertCircle, Send, FileText, ChevronDown, HelpCircle } from 'lucide-react';
 
 const ComplaintPage = () => {
@@ -9,6 +10,45 @@ const ComplaintPage = () => {
     type: 'WRONG_INFO', 
     description: '',
   });
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) navigate("/login");
+  }, [navigate]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    if (!formData.description.trim()) {
+      alert("Please type in your complaint!");
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+
+      const response = await fetch("/api/complaints", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify(formData), 
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) throw new Error(data.message);
+
+      alert("Your complaint has been submitted!");
+      navigate(-1);
+    } catch (error) {
+      alert(error.message || "Error");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const complaintTypes = [
     { value: 'WRONG_INFO', label: 'The book information is incorrect' },
@@ -22,15 +62,16 @@ const ComplaintPage = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-[#fafafa] py-12 px-6">
-      <div className="max-w-2xl mx-auto">
+    <div className="min-h-screen bg-[#fafafa]">
+      <SimpleHeader />
+      <div className="max-w-2xl mx-auto py-12 px-6">
         <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
           <div className="bg-indigo-600 p-4 flex items-center gap-3 text-white">
             <AlertCircle size={20} />
             <span className="text-sm font-medium">Your report will help BookHaven cleaner and more accurate.</span>
           </div>
 
-          <form className="p-8 space-y-8">
+          <form className="p-8 space-y-8" onSubmit={handleSubmit}>
             {/* DROP DOWN LIST */}
             <div className="space-y-3">
               <label className="flex items-center gap-2 text-sm font-bold text-gray-700 ml-1">
@@ -79,10 +120,11 @@ const ComplaintPage = () => {
                 Back
               </button>
               <button 
-                type="submit" 
+                type="submit"
+                disabled={loading} 
                 className="flex-[2] py-4 bg-indigo-600 text-white font-bold rounded-2xl shadow-lg shadow-indigo-100 hover:bg-indigo-700 transform hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
               >
-                Send <Send size={18} />
+                {loading ? "Sending..." : "Send"} <Send size={18} />
               </button>
             </div>
           </form>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   User, Mail, Phone, Calendar, MapPin, 
   BookOpen, Star, MessageSquare, AlertTriangle, 
@@ -6,18 +6,35 @@ import {
 } from 'lucide-react';
 
 const ProfilePage = () => {
+  const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState('bookshelf');
 
-  // Giả lập dữ liệu từ Schema User
+  useEffect(() => {
+    const fetchProfile = async () => {
+      const token = localStorage.getItem("token");
+
+      const response = await fetch("http://localhost:3000/api/users/me", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+
+      const data = await response.json();
+      setUser(data.user);
+    };
+
+    fetchProfile();
+  }, []);
+
+  if (!user) return <div>Loading...</div>;
+  //return user;
+
   const userData = {
-    fullName: "Alex Sanders",
-    email: "alex.sanders@example.com",
-    phoneNum: "0987.654.321",
-    dateOfBirth: "1998-10-24",
-    sex: "MALE",
-    role: "USER",
-    createdAt: "2024-01-15",
-    // Thống kê dựa trên UserBook status
+    fullName: user.fullName,
+    email: user.email,
+    phoneNum: user.phoneNum,
+    dateOfBirth: user.dateOfBirth,
+    sex: user.sex,
+    role: user.role,
+    createdAt: user.createdAt,
     stats: {
       wishlist: 12,
       reading: 3,
