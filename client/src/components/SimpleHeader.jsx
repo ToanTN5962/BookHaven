@@ -18,7 +18,7 @@ const SimpleHeader = () => {
         <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600">
           <User size={20} />
         </div>
-        <span className="font-semibold text-sm text-gray-700">Alex</span>
+        <span className="font-semibold text-sm text-gray-700">Toan</span>
         <ChevronDown size={14} className="text-gray-400" />
       </button>
     </nav>
