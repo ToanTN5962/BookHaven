@@ -224,7 +224,7 @@ export default function AfterLoginPage() {
             <div className="mt-12 flex justify-center items-center gap-4">
               <span className="text-sm text-gray-500 font-medium">Page {currentPage} of 10</span>
               <div className="flex gap-1">
-                {[1, 2, 3, 4, 5].map(num => (
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
                   <button 
                     key={num}
                     onClick={() => setCurrentPage(num)}
