@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import {Link} from 'react-router-dom'
+import {Link, useNavigate} from 'react-router-dom'
 import { Mail, Lock, User, Phone, Calendar, ArrowRight, ChevronDown } from 'lucide-react';
 
 const SignUpPage = () => {
@@ -44,7 +44,8 @@ const SignUpPage = () => {
       const data = await response.json();
       
       if(response.ok){
-        alert("Account created successfully!");
+        alert("Account created successfully! Please log in to continue!");
+        navigate('/login');
       }
       else{
         alert(data.message || "Login failed!");

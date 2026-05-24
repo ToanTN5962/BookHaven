@@ -51,18 +51,44 @@ const AfterLoginHeader = () => {
 };
 
 const SidebarBookshelf = () => {
-  const stats = [
-    { label: "Reading", count: 3, icon: <BookOpen size={18} />, color: "text-blue-500" },
-    { label: "Want to Read", count: 12, icon: <Bookmark size={18} />, color: "text-amber-500" },
-    { label: "Completed", count: 45, icon: <CheckCircle size={18} />, color: "text-emerald-500" },
-    { label: "Dropped", count: 2, icon: <XCircle size={18} />, color: "text-red-400" },
-  ];
+  const [bookshelf, setBookshelf] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const recentBooks = [
-    { id: 1, color: "bg-purple-200" },
-    { id: 2, color: "bg-blue-200" },
-    { id: 3, color: "bg-rose-200" },
-  ];
+  useEffect(() => {
+    const fetchBookshelf = async () => {
+      const user = JSON.parse(localStorage.getItem("user")); 
+      console.log("user từ localStorage:", user);
+      if (!user) return setLoading(false);
+
+      try {
+        const res = await fetch(`http://localhost:3000/api/users/getbookshelfinfo/${user.id}`);
+        console.log("response status:", res.status);
+        const data = await res.json();
+        console.log("data từ API:", data);
+        setBookshelf(data);
+      } catch (error) {
+        console.error("Error fetching bookshelf:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBookshelf();
+  }, []);
+
+  const stats = bookshelf
+    ? [
+        { label: "Reading",      count: bookshelf.stats.reading,  icon: <BookOpen size={18} />,   color: "text-blue-500" },
+        { label: "Want to Read", count: bookshelf.stats.wishlist,  icon: <Bookmark size={18} />,   color: "text-amber-500" },
+        { label: "Completed",    count: bookshelf.stats.read,      icon: <CheckCircle size={18} />, color: "text-emerald-500" },
+        { label: "Dropped",      count: bookshelf.stats.drop,      icon: <XCircle size={18} />,    color: "text-red-400" },
+      ]
+    : [
+      { label: "Reading",      count: 0, icon: <BookOpen size={18} />,    color: "text-blue-500" },
+      { label: "Want to Read", count: 0, icon: <Bookmark size={18} />,    color: "text-amber-500" },
+      { label: "Completed",    count: 0, icon: <CheckCircle size={18} />, color: "text-emerald-500" },
+      { label: "Dropped",      count: 0, icon: <XCircle size={18} />,     color: "text-red-400" },
+    ];
 
   return (
     <aside className="w-full lg:w-72 space-y-6">
@@ -70,31 +96,64 @@ const SidebarBookshelf = () => {
         <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
           Your Bookshelf
         </h3>
-        <div className="space-y-4">
-          {stats.map((stat, i) => (
-            <div key={i} className="flex items-center justify-between group cursor-pointer">
-              <div className="flex items-center gap-3 text-gray-600 group-hover:text-indigo-600 transition-colors">
-                <span className={stat.color}>{stat.icon}</span>
-                <span className="text-sm font-medium">{stat.label}</span>
-              </div>
-              <span className="bg-gray-100 px-2 py-0.5 rounded text-xs font-bold text-gray-500 leading-none">
-                {stat.count}
-              </span>
-            </div>
-          ))}
-        </div>
 
-        <div className="mt-8">
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Recently Added</p>
-          <div className="flex -space-x-4">
-            {recentBooks.map((book) => (
-              <div key={book.id} className={`w-12 h-16 ${book.color} rounded-md border-2 border-white shadow-lg transform hover:-translate-y-2 transition-transform cursor-pointer flex items-center justify-center text-[10px] text-gray-500 font-bold`}>
-                Cover
+        {loading ? (
+          <div className="space-y-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-6 bg-gray-100 rounded animate-pulse" />
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {stats.map((stat, i) => (
+              <div key={i} className="flex items-center justify-between group cursor-pointer">
+                <div className="flex items-center gap-3 text-gray-600 group-hover:text-indigo-600 transition-colors">
+                  <span className={stat.color}>{stat.icon}</span>
+                  <span className="text-sm font-medium">{stat.label}</span>
+                </div>
+                <span className="bg-gray-100 px-2 py-0.5 rounded text-xs font-bold text-gray-500 leading-none">
+                  {stat.count}
+                </span>
               </div>
             ))}
-            <div className="w-12 h-16 bg-gray-50 border-2 border-dashed border-gray-200 rounded-md flex items-center justify-center text-gray-400 cursor-pointer hover:bg-gray-100 transition-colors">
-              <span className="text-lg">+</span>
-            </div>
+          </div>
+        )}
+
+        <div className="mt-8">
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">
+            Recently Added
+          </p>
+          <div className="flex -space-x-4">
+            {loading ? (
+              [...Array(3)].map((_, i) => (
+                <div key={i} className="w-12 h-16 bg-gray-100 rounded-md animate-pulse border-2 border-white" />
+              ))
+            ) : (
+              <>
+                {bookshelf?.recentBooks.map((book) => (
+                  <div
+                    key={book.id}
+                    className="w-12 h-16 rounded-md border-2 border-white shadow-lg transform hover:-translate-y-2 transition-transform cursor-pointer overflow-hidden"
+                  >
+                    {book.imageUrl ? (
+                      <img
+                        src={`https://covers.openlibrary.org/b/isbn/${book.isbn}-M.jpg`}
+                        onError={(e) => {
+                          e.target.src = "https://placehold.co/150x200?text=No+Cover";
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-purple-200 flex items-center justify-center text-[10px] text-gray-500 font-bold">
+                        No Cover
+                      </div>
+                    )}
+                  </div>
+                ))}
+                <div className="w-12 h-16 bg-gray-50 border-2 border-dashed border-gray-200 rounded-md flex items-center justify-center text-gray-400 cursor-pointer hover:bg-gray-100 transition-colors">
+                  <span className="text-lg">+</span>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>

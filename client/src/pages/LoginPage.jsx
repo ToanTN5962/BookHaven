@@ -49,9 +49,7 @@ const LoginPage = () => {
 
       if(response.ok){
         localStorage.setItem('token', data.token);
-        if(data.user){
-          localStorage.setItem('userName', data.user.name);
-        }
+        localStorage.setItem('user', JSON.stringify(data.user));
         alert("Login successfully!");
         navigate('/afterlogin');
       }

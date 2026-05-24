@@ -180,7 +180,7 @@ async function main() {
       publisher: "NXB Trẻ",
       description: "Câu chuyện tuổi thơ đẹp đẽ và trong sáng ở vùng quê Việt Nam.",
       language: "vi",
-      imageUrl: "https://via.placeholder.com/150x200?text=Hoa+Vang",
+      imageUrl: "https://placehold.co/150x200?text=Hoa+Vang",
       authorIdx: 0,
       genreIdxs: [0, 1],
     },

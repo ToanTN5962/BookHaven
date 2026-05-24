@@ -1,5 +1,6 @@
 const prisma = require("../prisma/client");
 const jwt = require("jsonwebtoken");
+const bcrypt = require("bcrypt");
 
 const signup = async (req, res) => {
     try {
@@ -21,12 +22,14 @@ const signup = async (req, res) => {
             });
         }
 
+        const hashedPassword = await bcrypt.hash(password, 10);
+
         const user = await prisma.user.create({
             data: {
                 fullName, 
                 email, 
                 phoneNum, 
-                password, 
+                password: hashedPassword, 
                 dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null, 
                 sex
             }
@@ -59,7 +62,9 @@ const login = async (req, res) => {
             where: {email}
         });
 
-        if(!user || password != user.password){
+        const isMatch = user && await bcrypt.compare(password, user.password);
+
+        if(!isMatch){
             return res.status(401).json({
                 message: "Incorrect login information"
             });
