@@ -73,43 +73,54 @@ const getBookById = async (req, res) => {
 };
 
 const getTopRated = async(req, res) => {
-    const nytRes = await fetch(
-        `https://api.nytimes.com/svc/books/v3/lists/overview.json?api-key=${process.env.NYT_API_KEY}`
-    );
-    const { results } = await nytRes.json();
+    //console.log("Running get top rated");
+    try{
+        const nytRes = await fetch(
+            `https://api.nytimes.com/svc/books/v3/lists/overview.json?api-key=${process.env.NYT_API_KEY}`
+        );
+        const { results } = await nytRes.json();
 
-    //Lay cuốn sách hot nhất của mỗi thể loại
-    const topBooks = results.lists.map(list => ({
-        genre: list.list_name,
-        book: list.books[0] 
-    }));
+        //Lay cuốn sách hot nhất của mỗi thể loại
+        const topBooks = results.lists.map(list => ({
+            genre: list.list_name,
+            book: list.books[0] 
+        }));
 
-    const topBooksDetails = await Promise.all(
-        topBooks.map(async ({ genre, book }) => {
-            const isbn13 = book.isbns[0]?.isbn13;
+        const topBooksDetails = await Promise.all(
+            topBooks.map(async ({ genre, book }) => {
+                const isbn13 = book.isbns[0]?.isbn13;
 
-            const res = await fetch(
-                `https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn13}&key=${GOOGLE_BOOKS_API_KEY}`
-            );
-            const data = await res.json();
-            const googleBook = data.items?.[0]?.volumeInfo;
+                const res = await fetch(
+                    `https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn13}&key=${process.env.GOOGLE_BOOKS_API_KEY}`
+                );
+                const data = await res.json();
+                const googleBook = data.items?.[0]?.volumeInfo;
 
-            return {
-                genre,
-                title: book.title,
-                author: book.author,
-                cover: book.book_image,
-                isbn13: book.primary_isbn13,
-                rating: googleBook?.averageRating,
-                ratingsCount: googleBook?.ratingsCount,
-                pageCount: googleBook?.pageCount,
-                publishedDate: googleBook?.publishedDate,
-                categories: googleBook?.categories,
-            };
-        })
-    );  
+                return {
+                    genre,
+                    title: book.title,
+                    author: book.author,
+                    cover: book.book_image,
+                    isbn13: book.primary_isbn13,
+                    rating: googleBook?.averageRating,
+                    ratingsCount: googleBook?.ratingsCount,
+                    pageCount: googleBook?.pageCount,
+                    publishedDate: googleBook?.publishedDate,
+                    categories: googleBook?.categories,
+                };
+            })
+        );  
 
-    return topBooksDetails;
+        const uniqueBooks = topBooksDetails.filter(
+            (book, index, self) =>
+                index === self.findIndex(b => b.isbn13 === book.isbn13)
+        );
+
+        return res.status(200).json(uniqueBooks);
+    }
+    catch(error){
+        return res.status(500).json({ message: "Server error", error: error.message });
+    }
 };
 
 module.exports = { 

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useEffect, useState} from 'react';
 import {useNavigate} from 'react-router-dom'
 import { Search, ShoppingCart, ChevronDown, ChevronLeft, ChevronRight, Star, Plus } from 'lucide-react';
 
@@ -37,7 +37,7 @@ const Navbar = () => {
   );
 };
 
-const Hero = () => (
+const Hero = ({ books }) => (
   <div className="relative overflow-hidden bg-gradient-to-r from-blue-50 to-indigo-50 py-16 px-8">
     <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between">
       <div className="md:w-1/2 z-10">
@@ -50,23 +50,52 @@ const Hero = () => (
           Discover now <span>→</span>
         </button>
       </div>
-      
-      <div className="md:w-1/2 flex gap-4 mt-12 md:mt-0 perspective-1000">
-        <div className="w-32 h-48 bg-blue-400 rounded shadow-2xl transform -rotate-12 translate-y-4"></div>
-        <div className="w-32 h-48 bg-indigo-400 rounded shadow-2xl transform rotate-6 -translate-y-4"></div>
-        <div className="w-32 h-48 bg-emerald-400 rounded shadow-2xl transform -rotate-6"></div>
+
+      {/* 3 cuốn sách hot nhất */}
+      <div className="md:w-1/2 flex gap-4 mt-12 md:mt-0">
+        {books.slice(0, 3).map((book, idx) => {
+          const rotations = ["-rotate-12 translate-y-4", "rotate-6 -translate-y-4", "-rotate-6"];
+          return (
+            <div
+              key={idx}
+              className={`w-32 h-48 rounded shadow-2xl transform ${rotations[idx]} overflow-hidden`}
+            >
+              <img
+                src={book.cover}
+                alt={book.title}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = "https://via.placeholder.com/150x200?text=No+Cover";
+                }}
+              />
+            </div>
+          );
+        })}
       </div>
     </div>
   </div>
 );
 
-const BookCard = ({ title, author, rating }) => (
+const BookCard = ({ title, author, rating, cover }) => {
+  const [imgLoaded, setImgLoaded] = useState(false);
+
+  return (
   <div className={`group p-4 rounded-2xl transition-all duration-300 hover:bg-white hover:shadow-2xl hover:scale-105`}>
-    <div className="relative aspect-[2/3] mb-4 overflow-hidden rounded-lg shadow-md">
-      <div className="w-full h-full bg-gray-200 animate-pulse group-hover:scale-110 transition-transform duration-500">
-        {/* Placeholder cho ảnh sách */}
-        <div className="flex items-center justify-center h-full text-gray-400">Cover</div>
-      </div>
+    <div className="relative aspect-[2/3] mb-4 overflow-hidden rounded-lg shadow-md"> 
+      {!imgLoaded && (
+        <div className="absolute inset-0 bg-gray-200 animate-pulse" />
+      )}
+      <img 
+        src={cover} 
+        alt={title}
+        className="w-full h-full object-cover"
+        onLoad={() => setImgLoaded(true)}
+        onError={(e) => {
+          e.target.onerror = null;
+          e.target.src = "https://via.placeholder.com/150x200?text=No+Cover";
+        }}
+      />
     </div>
     <div className="text-center">
       <div className="flex justify-center mb-1">
@@ -85,43 +114,101 @@ const BookCard = ({ title, author, rating }) => (
       </button>
     </div>
   </div>
-);
+)};
 
-const Highlights = () => {
-  const books = [
-    { title: "You did nothing wrong", author: "C. G. Drews", rating: 4 },
-    { title: "Everyone in this bank...", author: "Benjamin Stevenson", rating: 4 },
-    { title: "Innamorata", author: "Ava Reid", rating: 5 },
-    { title: "Under Water", author: "Tara Menon", rating: 4 },
-    { title: "The Plans I Have For You", author: "Lai Sanders", rating: 4 },
-    { title: "Call Me By Your Name", author: "Lai Sanders", rating: 4 },
-  ];
+const Highlights = ({ books }) => {  
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+
+  const maxIndex = books.length - 5;
+
+  const slideTo = (newIndex) => {
+    setIsTransitioning(true); 
+    setTimeout(() => {
+      setCurrentIndex(newIndex);
+      setIsTransitioning(false); 
+    }, 150); 
+  };
+
+  // Auto slide sau mỗi 3 giây
+  useEffect(() => {
+    if (books.length === 0) return;
+    const timer = setInterval(() => {
+      setCurrentIndex(prev => (prev + 1) % (books.length - 5));
+    }, 3000);
+    return () => clearInterval(timer); 
+  }, [books.length, currentIndex]);
+
+  const handlePrev = () => slideTo(currentIndex <= 0 ? maxIndex : currentIndex - 1);
+  const handleNext = () => slideTo(currentIndex >= maxIndex ? 0 : currentIndex + 1);
+
+  // Lấy 5 cuốn từ currentIndex
+  const visibleBooks = books.slice(currentIndex, currentIndex + 5);
 
   return (
     <section className="max-w-7xl mx-auto px-8 py-16">
       <h2 className="text-2xl font-bold text-gray-800 mb-8 underline decoration-yellow-400 decoration-4 underline-offset-8">
         This week's highlights
       </h2>
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8">
-        {books.map((book, idx) => (
-          <BookCard 
-            key={idx} 
-            title={book.title} 
-            author={book.author} 
-            rating={book.rating}
-          />
-        ))}
+
+      <div className="relative flex items-center gap-4">
+        {/* Mũi tên trái */}
+        <button
+          onClick={handlePrev}
+          className="p-4 rounded-full bg-gray-300 hover:bg-yellow-400 shadow-md hover:shadow-lg transition text-2xl font-bold text-gray-800"
+        >
+          ‹
+        </button>
+
+        {/* 5 cuốn sách */}
+        <div 
+          className="grid grid-cols-5 gap-8 flex-1 transition-opacity duration-300"
+          style={{ opacity: isTransitioning ? 0 : 1 }}
+        >
+          {visibleBooks.map((book, idx) => (
+            <BookCard
+              key={currentIndex + idx}
+              title={book.title}
+              author={book.author}
+              rating={book.rating}
+              cover={book.cover}
+            />
+          ))}
+        </div>
+
+        {/* Mũi tên phải */}
+        <button
+          onClick={handleNext}
+          className="p-4 rounded-full bg-gray-300 hover:bg-yellow-400 shadow-md hover:shadow-lg transition text-2xl font-bold text-gray-800"
+        >
+          ›
+        </button>
       </div>
     </section>
   );
 };
 
 export default function HomePage() {
+  const [books, setBooks] = useState([]);
+
+  useEffect(() => {
+    const fetchHotBooks = async () => {
+      try {
+        const response = await fetch(`http://localhost:3000/api/books/toprate`);
+        const data = await response.json();
+        setBooks(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error("Error fetching books:", error);
+      }
+    };
+    fetchHotBooks();
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#fafafa] font-sans text-gray-900">
       <Navbar />
-      <Hero />
-      <Highlights />
+      <Hero books={books} />       
+      <Highlights books={books} />
     </div>
   );
 }
