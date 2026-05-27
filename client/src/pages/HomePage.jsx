@@ -179,11 +179,11 @@ const Highlights = ({ books, onAddToWishlist }) => {
           {visibleBooks.map((book, idx) => (
             <BookCard
               key={currentIndex + idx}
-              id={book.id}
+              id={book.id || book.isbn13 || book.primary_isbn13 || book.isbn || book.volumeId}
               title={book.title}
               author={book.author}
               rating={book.rating}
-              cover={book.cover}
+              cover={book.cover || book.thumbnail || book.book_image}
               onAddToWishlist={onAddToWishlist}
               onHoverStart={() => setPaused(true)}
               onHoverEnd={() => setPaused(false)}

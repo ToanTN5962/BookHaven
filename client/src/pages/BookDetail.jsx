@@ -215,7 +215,7 @@ const WriteReview = ({ onSubmit }) => {
 // ---------------------------------------------------------------------------
 // Reviews Section
 // ---------------------------------------------------------------------------
-const ReviewsSection = ({ bookId }) => {
+const ReviewsSection = ({ bookIsbn }) => {
   const [reviews, setReviews] = useState(MOCK_REVIEWS);
 
   const handleLike = (reviewId) => {
@@ -288,7 +288,7 @@ const ReviewsSection = ({ bookId }) => {
 // Main Page
 // ---------------------------------------------------------------------------
 export default function BookDetail() {
-  const { bookId }     = useParams();
+  const { bookIsbn }     = useParams();
   const navigate       = useNavigate();
   const [book,         setBook]         = useState(null);
   const [loading,      setLoading]      = useState(true);
@@ -301,7 +301,7 @@ export default function BookDetail() {
     const fetchBook = async () => {
       setLoading(true);
       try {
-        const res  = await fetch(`http://localhost:3000/api/books/${bookId}`);
+        const res  = await fetch(`http://localhost:3000/api/books/${bookIsbn}`);
         const data = await res.json();
         setBook(data);
       } catch (err) {
@@ -311,7 +311,7 @@ export default function BookDetail() {
       }
     };
     fetchBook();
-  }, [bookId]);
+  }, [bookIsbn]);
 
   if (loading) return (
     <div className="min-h-screen bg-[#fafafa] flex items-center justify-center">
@@ -491,7 +491,7 @@ export default function BookDetail() {
       </div>
 
       {/* Reviews */}
-      <ReviewsSection bookId={bookId} />
+      <ReviewsSection bookIsbn={bookIsbn} />
     </div>
   );
 }

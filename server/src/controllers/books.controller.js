@@ -44,36 +44,80 @@ const getRandomBooks = async (req, res) => {
     }
 };
 
-const getBookById = async (req, res) => {
+const getBookByIsbn = async (req, res) => {
     try {
-        const { bookId } = req.params;
-        //console.log(bookId);
+        const { bookIsbn } = req.params;
+        const isIsbnLike = /^[0-9Xx-]+$/.test(bookIsbn);
 
-        const response = await fetch(
-            `https://www.googleapis.com/books/v1/volumes/${bookId}?key=${process.env.GOOGLE_BOOKS_API_KEY}`
-        );
-        const data = await response.json();
-        //console.log(data)
-
-        const book = {
-            id:            data.id,
-            title:         data.volumeInfo.title || 'Unknown Title',
-            author:        data.volumeInfo.authors?.join(', ') || 'Unknown Author',
-            description:   data.volumeInfo.description || '',
-            rating:        data.volumeInfo.averageRating || 'N/A',
-            thumbnail:     data.volumeInfo.imageLinks?.thumbnail || null,
-            tags:          data.volumeInfo.categories || [],
-            publishedDate: data.volumeInfo.publishedDate || '',
-            pageCount:     data.volumeInfo.pageCount || null,
-            publisher:     data.volumeInfo.publisher || '',
-            language:      data.volumeInfo.language || '',
+        const mapGoogleItem = (item) => {
+            const info = item.volumeInfo || {};
+            return {
+                id:            item.id || bookIsbn,
+                title:         info.title || 'Unknown Title',
+                author:        info.authors?.join(', ') || 'Unknown Author',
+                description:   info.description || info.subtitle || '',
+                rating:        info.averageRating || 'N/A',
+                thumbnail:     info.imageLinks?.thumbnail || info.imageLinks?.smallThumbnail || null,
+                tags:          info.categories || [],
+                publishedDate: info.publishedDate || '',
+                pageCount:     info.pageCount || null,
+                publisher:     info.publisher || '',
+                language:      info.language || '',
+            };
         };
 
-        //console.log(book);
-        return res.status(200).json(book);
+        if (!isIsbnLike) {
+            try {
+                const response = await fetch(
+                    `https://www.googleapis.com/books/v1/volumes/${encodeURIComponent(bookIsbn)}?key=${process.env.GOOGLE_BOOKS_API_KEY}`
+                );
+                const data = await response.json();
+                if (data && !data.error && (data.id || data.volumeInfo)) {
+                    return res.status(200).json(mapGoogleItem(data));
+                }
+            } catch (err) {
+
+            }
+        }
+
+        const isbn = bookIsbn.replace(/-/g, '').trim();
+        const searchRes = await fetch(
+            `https://www.googleapis.com/books/v1/volumes?q=isbn:${encodeURIComponent(isbn)}&key=${process.env.GOOGLE_BOOKS_API_KEY}`
+        );
+        const searchData = await searchRes.json();
+        const item = searchData.items?.[0];
+        if (item) {
+            return res.status(200).json(mapGoogleItem(item));
+        }
+
+        try {
+            const nytRes = await fetch(
+                `https://api.nytimes.com/svc/books/v3/lists/best-sellers/history.json?isbn=${isbn}&api-key=${process.env.NYT_API_KEY}`
+            );
+            const nytData = await nytRes.json();
+            const match = nytData.results?.[0];
+
+            if (match) {
+                return res.status(200).json({
+                    id:            match.primary_isbn13 || match.primary_isbn10 || match.title,
+                    title:         match.title || 'Unknown Title',
+                    author:        match.author || 'Unknown Author',
+                    description:   match.description || '',
+                    rating:        'N/A',
+                    thumbnail:     null, // history API không trả cover
+                    tags:          match.ranks_history?.map(r => r.list_name).slice(0, 3) || [],
+                    publishedDate: match.published_date || '',
+                    pageCount:     null,
+                    publisher:     match.publisher || '',
+                    language:      '',
+                });
+            }
+        } catch (nytErr) { }
+
+        return res.status(404).json({ message: 'Book not found' });
     }
     catch(error){
-        return res.status(500).json({message: "Server error"}, error);
+        return res.status(500).json({message: "Server error", error: error.message});
     }
     
 };
@@ -131,6 +175,6 @@ const getTopRated = async(req, res) => {
 
 module.exports = { 
     getRandomBooks,
-    getBookById,
+    getBookByIsbn,
     getTopRated
 };

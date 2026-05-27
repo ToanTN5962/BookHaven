@@ -1,9 +1,9 @@
 const express = require("express");
 const router = express.Router();
-const { getRandomBooks, getBookById, getTopRated } = require("../controllers/books.controller");
+const { getRandomBooks, getBookByIsbn, getTopRated } = require("../controllers/books.controller");
 
 router.get("/random", getRandomBooks);
 router.get("/toprate", getTopRated);
-router.get("/:bookId", getBookById);
+router.get("/:bookIsbn", getBookByIsbn);
 
 module.exports = router;
