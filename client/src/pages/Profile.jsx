@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   User, Mail, Phone, Calendar, MapPin, 
   BookOpen, Star, MessageSquare, AlertTriangle, 
@@ -8,6 +9,17 @@ import {
 const ProfilePage = () => {
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState('bookshelf');
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const navigate = useNavigate();
+
+  const handleConfirmYes = () => {
+    localStorage.removeItem('token');
+    setShowConfirm(false);
+    setShowSuccess(true);
+  };
+
+  const handleConfirmNo = () => setShowConfirm(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -47,7 +59,6 @@ const ProfilePage = () => {
     <div className="min-h-screen bg-[#fafafa] py-10 px-4 md:px-8">
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row gap-8">
         
-        {/* SIDEBAR: THÔNG TIN CÁ NHÂN */}
         <aside className="w-full md:w-1/3 lg:w-1/4">
           <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 sticky top-24">
             <div className="flex flex-col items-center text-center">
@@ -84,7 +95,10 @@ const ProfilePage = () => {
                 </div>
                 <ChevronRight size={16} />
               </button>
-              <button className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-red-50 text-red-600 transition-colors">
+              <button
+                onClick={() => setShowConfirm(true)}
+                className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-red-50 text-red-600 transition-colors"
+              >
                 <div className="flex items-center gap-3 font-medium">
                   <LogOut size={18} /> Log out
                 </div>
@@ -185,6 +199,33 @@ const ProfilePage = () => {
           </div>
         </main>
       </div>
+      {/* Confirmation Modal */}
+      {showConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md">
+            <h3 className="text-lg font-bold mb-2">Are you sure you want to log out?</h3>
+            <p className="text-sm text-gray-500 mb-6">You will be returned to the homepage or can go to login after logging out.</p>
+            <div className="flex justify-end gap-3">
+              <button onClick={handleConfirmNo} className="px-4 py-2 rounded-md bg-gray-100">No</button>
+              <button onClick={handleConfirmYes} className="px-4 py-2 rounded-md bg-red-600 text-white">Yes</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Modal */}
+      {showSuccess && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md text-center">
+            <h3 className="text-lg font-bold mb-2">Logout successfully</h3>
+            <p className="text-sm text-gray-500 mb-6">You have been logged out.</p>
+            <div className="flex justify-center gap-4">
+              <button onClick={() => navigate('/')} className="px-4 py-2 rounded-md bg-indigo-600 text-white">Homepage</button>
+              <button onClick={() => navigate('/login')} className="px-4 py-2 rounded-md bg-gray-100">Login</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

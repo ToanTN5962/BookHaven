@@ -4,6 +4,7 @@ import {
   ArrowLeft, Star, BookOpen, Calendar, Hash,
   Globe, Building, Heart, BookMarked, CheckCircle,
   XCircle, Share2, ChevronDown, ThumbsUp, Send, MessageSquare
+  , Flag
 } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
@@ -94,34 +95,42 @@ const UserAvatar = ({ name }) => {
 // ---------------------------------------------------------------------------
 // Review Card
 // ---------------------------------------------------------------------------
-const ReviewCard = ({ review, onLike }) => (
-  <div className="bg-white rounded-2xl border border-gray-100 p-5 hover:shadow-md transition-shadow">
-    <div className="flex items-start justify-between mb-3">
-      <div className="flex items-center gap-3">
-        <UserAvatar name={review.user.name} />
-        <div>
-          <p className="font-bold text-sm text-gray-800">{review.user.name}</p>
-          <p className="text-xs text-gray-400">{review.createdAt}</p>
+const ReviewCard = ({ review, onLike }) => {
+  const navigate = useNavigate();
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 p-5 hover:shadow-md transition-shadow">
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex items-center gap-3">
+          <UserAvatar name={review.user.name} />
+          <div>
+            <p className="font-bold text-sm text-gray-800">{review.user.name}</p>
+            <p className="text-xs text-gray-400">{review.createdAt}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <StarRating rating={review.rating} size={14} />
+          <button onClick={() => navigate('/complaint')} className="p-1 rounded-md hover:bg-gray-50 text-gray-400" title="Report">
+            <Flag size={14} />
+          </button>
         </div>
       </div>
-      <StarRating rating={review.rating} size={14} />
+
+      <p className="text-sm text-gray-600 leading-relaxed mb-4">{review.content}</p>
+
+      <button
+        onClick={() => onLike(review.id)}
+        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+          review.liked
+            ? 'bg-indigo-50 text-indigo-600'
+            : 'text-gray-400 hover:bg-gray-50 hover:text-indigo-500'
+        }`}
+      >
+        <ThumbsUp size={13} className={review.liked ? 'fill-indigo-500' : ''} />
+        {review.likes} {review.likes === 1 ? 'like' : 'likes'}
+      </button>
     </div>
-
-    <p className="text-sm text-gray-600 leading-relaxed mb-4">{review.content}</p>
-
-    <button
-      onClick={() => onLike(review.id)}
-      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-        review.liked
-          ? 'bg-indigo-50 text-indigo-600'
-          : 'text-gray-400 hover:bg-gray-50 hover:text-indigo-500'
-      }`}
-    >
-      <ThumbsUp size={13} className={review.liked ? 'fill-indigo-500' : ''} />
-      {review.likes} {review.likes === 1 ? 'like' : 'likes'}
-    </button>
-  </div>
-);
+  );
+};
 
 // ---------------------------------------------------------------------------
 // Write Review Panel
@@ -420,12 +429,17 @@ export default function BookDetail() {
 
           {/* Book info */}
           <div className="flex-1 min-w-0">
-            <div className="flex flex-wrap gap-2 mb-4">
-              {book.tags?.slice(0, 3).map((tag, i) => (
-                <span key={i} className="text-[10px] font-black uppercase tracking-widest bg-indigo-50 text-indigo-500 px-3 py-1 rounded-full">
-                  {tag}
-                </span>
-              ))}
+            <div className="mb-4">
+              <button onClick={() => navigate('/complaint')} className="text-sm text-red-600 bg-red-50 px-2 py-1 rounded-full font-bold inline-flex items-center gap-2 mb-3">
+                <Flag size={14} /> Report
+              </button>
+              <div className="flex flex-wrap gap-2">
+                {book.tags?.slice(0, 3).map((tag, i) => (
+                  <span key={i} className="text-[10px] font-black uppercase tracking-widest bg-indigo-50 text-indigo-500 px-3 py-1 rounded-full">
+                    {tag}
+                  </span>
+                ))}
+              </div>
             </div>
 
             <h1 className="text-3xl md:text-4xl font-black text-gray-900 leading-tight mb-2">{book.title}</h1>

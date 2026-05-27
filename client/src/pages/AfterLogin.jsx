@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 
 const AfterLoginHeader = () => {
+  const stored = localStorage.getItem("user");
+  const user = stored ? JSON.parse(stored) : null;
   const navigate = useNavigate();
   return (
     <nav className="flex items-center justify-between px-8 py-4 bg-white border-b border-gray-100 sticky top-0 z-50">
@@ -14,7 +16,7 @@ const AfterLoginHeader = () => {
           BOOKHAVEN
         </h1>
         <div className="hidden lg:flex gap-6 text-gray-600 font-medium">
-          <a href="#" className="hover:text-indigo-600">My Library</a>
+          <a href="#" className="hover:text-indigo-600" onClick={(e) => { e.preventDefault(); navigate('/mylibrary'); }}>My Library</a>
           <a href="#" className="hover:text-indigo-600">Community</a>
         </div>
       </div>
@@ -42,7 +44,7 @@ const AfterLoginHeader = () => {
           <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600">
             <User size={20} />
           </div>
-          <span className="font-semibold text-sm text-gray-700">Toan</span>
+          <span className="font-semibold text-sm text-gray-700">{user?.fullName || 'Profile'}</span>
           <ChevronDown size={14} className="text-gray-400" />
         </button>
       </div>
@@ -76,7 +78,8 @@ const SidebarBookshelf = () => {
     fetchBookshelf();
   }, []);
 
-  const stats = bookshelf
+  const hasStats = bookshelf && bookshelf.stats;
+  const stats = hasStats
     ? [
         { label: "Reading",      count: bookshelf.stats.reading,  icon: <BookOpen size={18} />,   color: "text-blue-500" },
         { label: "Want to Read", count: bookshelf.stats.wishlist,  icon: <Bookmark size={18} />,   color: "text-amber-500" },
@@ -130,14 +133,15 @@ const SidebarBookshelf = () => {
               ))
             ) : (
               <>
-                {bookshelf?.recentBooks.map((book) => (
+                {(bookshelf?.recentBooks || []).map((book) => (
                   <div
                     key={book.id}
                     className="w-12 h-16 rounded-md border-2 border-white shadow-lg transform hover:-translate-y-2 transition-transform cursor-pointer overflow-hidden"
                   >
                     {book.imageUrl ? (
                       <img
-                        src={`https://covers.openlibrary.org/b/isbn/${book.isbn}-M.jpg`}
+                        src={book.imageUrl}
+                        alt={book.title}
                         onError={(e) => {
                           e.target.src = "https://placehold.co/150x200?text=No+Cover";
                         }}
@@ -161,8 +165,10 @@ const SidebarBookshelf = () => {
   );
 };
 
-const DetailedBookCard = ({ book }) => (
-  <div className="flex gap-6 bg-white p-5 rounded-3xl border border-gray-100 hover:shadow-xl transition-all group">
+const DetailedBookCard = ({ book }) => {
+  const navigate = useNavigate();
+  return (
+  <div className="flex gap-6 bg-white p-5 rounded-3xl border border-gray-100 hover:shadow-xl transition-all group cursor-pointer" onClick={() => navigate(`/books/${book.id}`)}>
     <div className="w-32 h-44 bg-gray-200 rounded-xl overflow-hidden flex-shrink-0 shadow-md">
       {book.thumbnail ? (
         <img
@@ -176,7 +182,7 @@ const DetailedBookCard = ({ book }) => (
         </div>
       )}
     </div>
-    <div className="flex flex-col flex-1">
+    <div onClick={() => navigate(`/books/${book.id}`)} className="flex flex-col flex-1">
       <div className="flex justify-between items-start">
         <div>
           <h3 className="font-bold text-xl text-gray-800 line-clamp-1 mb-1">{book.title}</h3>
@@ -195,19 +201,20 @@ const DetailedBookCard = ({ book }) => (
       
       <div className="mt-auto flex items-center justify-between">
         <div className="flex gap-2">
-          {book.tags.map((tag, i) => (
+          {(book.tags || []).map((tag, i) => (
             <span key={i} className="text-[10px] bg-gray-100 text-gray-500 px-2 py-1 rounded-full uppercase font-bold">
               {tag}
             </span>
           ))}
         </div>
-        <button className="text-sm font-bold text-indigo-600 hover:underline">
+        <button onClick={() => navigate(`/books/${book.id}`)} className="text-sm font-bold text-indigo-600 hover:underline">
           View Detail
         </button>
       </div>
     </div>
   </div>
-);
+  );
+};
 
 export default function AfterLoginPage() {
   const [currentPage, setCurrentPage] = useState(1);

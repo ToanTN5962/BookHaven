@@ -14,15 +14,27 @@ const getInfo = async (req, res) => {
                 phoneNum: true,
                 email: true,
                 role: true,
-                createdAt: true
+                createdAt: true,
+              
             }
         })
 
         console.log("user từ DB:", user);
 
-        const {password: pass, ...userWithoutPassword} = user;
+        if (!user) return res.status(404).json({ message: 'User not found' });
 
-        return res.status(200).json({message: "Get user information successfully!", user});
+        // const [reading, wishlist, read, drop] = await Promise.all([
+        //   prisma.userBook.count({ where: { userId: Number(userId), status: 'READING' } }),
+        //   prisma.userBook.count({ where: { userId: Number(userId), status: 'WISHLIST' } }),
+        //   prisma.userBook.count({ where: { userId: Number(userId), status: 'READ' } }),
+        //   prisma.userBook.count({ where: { userId: Number(userId), status: 'DROP' } }),
+        // ]);
+
+        return res.status(200).json({
+          message: "Get user information successfully!",
+          user
+          // stats: { reading, wishlist, read, drop }
+        });
     }
     catch(error){
         console.error("Lỗi getInfo:", error);
@@ -31,35 +43,53 @@ const getInfo = async (req, res) => {
 };
 
 const getBookshelfInfo = async (req, res) => {
-    try {
+  try {
     const { userId } = req.params;
+    const uid = Number(userId);
 
-    const [reading, wishlist, read, drop] = await Promise.all([
-      prisma.userBook.count({ where: { userId: Number(userId), status: "READING" } }),
-      prisma.userBook.count({ where: { userId: Number(userId), status: "WISHLIST" } }),
-      prisma.userBook.count({ where: { userId: Number(userId), status: "READ" } }),
-      prisma.userBook.count({ where: { userId: Number(userId), status: "DROP" } }),
+    // fetch lists per status in parallel
+    const [readingList, wishlistList, readList, dropList] = await Promise.all([
+      prisma.userBook.findMany({
+        where: { userId: uid, status: "READING" },
+        orderBy: { createdAt: "desc" },
+        include: { book: { select: { id: true, title: true, imageUrl: true, authors: { include: { author: { select: { fullName: true } } } } } } }
+      }),
+      prisma.userBook.findMany({
+        where: { userId: uid, status: "WISHLIST" },
+        orderBy: { createdAt: "desc" },
+        include: { book: { select: { id: true, title: true, imageUrl: true, authors: { include: { author: { select: { fullName: true } } } } } } }
+      }),
+      prisma.userBook.findMany({
+        where: { userId: uid, status: "READ" },
+        orderBy: { createdAt: "desc" },
+        include: { book: { select: { id: true, title: true, imageUrl: true, authors: { include: { author: { select: { fullName: true } } } } } } }
+      }),
+      prisma.userBook.findMany({
+        where: { userId: uid, status: "DROP" },
+        orderBy: { createdAt: "desc" },
+        include: { book: { select: { id: true, title: true, imageUrl: true, authors: { include: { author: { select: { fullName: true } } } } } } }
+      }),
     ]);
 
-    // Lấy 3 cuốn thêm gần nhất
-    const recentBooks = await prisma.userBook.findMany({
-      where: { userId: Number(userId) },
-      orderBy: { createdAt: "desc" },
-      take: 3,
-      include: {
-        book: {
-          select: { id: true, title: true, imageUrl: true }
-        }
-      }
-    });
+    const mapBooks = (list) => list.map(ub => ({
+      id: ub.book.id,
+      title: ub.book.title,
+      imageUrl: ub.book.imageUrl,
+      author: (ub.book.authors || []).map(a => a.author.fullName).join(', '),
+      addedAt: ub.createdAt
+    }));
 
     return res.status(200).json({
-      stats: { reading, wishlist, read, drop },
-      recentBooks: recentBooks.map(ub => ({
-        id: ub.book.id,
-        title: ub.book.title,
-        imageUrl: ub.book.imageUrl,
-      }))
+      stats: {
+        reading: readingList.length,
+        wishlist: wishlistList.length,
+        read: readList.length,
+        drop: dropList.length
+      },
+      reading: mapBooks(readingList),
+      wishlist: mapBooks(wishlistList),
+      read: mapBooks(readList),
+      drop: mapBooks(dropList)
     });
   } catch (error) {
     return res.status(500).json({ message: "Server error", error: error.message });

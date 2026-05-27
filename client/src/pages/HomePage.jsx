@@ -77,12 +77,17 @@ const Hero = ({ books }) => (
   </div>
 );
 
-const BookCard = ({ title, author, rating, cover }) => {
+const BookCard = ({ id, title, author, rating, cover, onAddToWishlist, onHoverStart, onHoverEnd }) => {
   const [imgLoaded, setImgLoaded] = useState(false);
+  const navigate = useNavigate();
 
   return (
-  <div className={`group p-4 rounded-2xl transition-all duration-300 hover:bg-white hover:shadow-2xl hover:scale-105`}>
-    <div className="relative aspect-[2/3] mb-4 overflow-hidden rounded-lg shadow-md"> 
+  <div
+    onMouseEnter={onHoverStart}
+    onMouseLeave={onHoverEnd}
+    className={`group p-4 rounded-2xl transition-all duration-300 hover:bg-white hover:shadow-2xl hover:scale-105 cursor-pointer`}
+  >
+    <div onClick={() => id && navigate(`/books/${id}`)} className="relative aspect-[2/3] mb-4 overflow-hidden rounded-lg shadow-md"> 
       {!imgLoaded && (
         <div className="absolute inset-0 bg-gray-200 animate-pulse" />
       )}
@@ -109,18 +114,23 @@ const BookCard = ({ title, author, rating, cover }) => {
       
     </div>
     <div className="relative text-center opacity-0 group-hover:opacity-100 transition-opacity">
-      <button className = "bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-lg">
-          + Add to wishlist
+      <button
+        className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-lg"
+        onClick={() => onAddToWishlist && onAddToWishlist({ title, author, cover })}
+      >
+        + Add to wishlist
       </button>
     </div>
+
   </div>
 )};
 
-const Highlights = ({ books }) => {  
+const Highlights = ({ books, onAddToWishlist }) => {  
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [paused, setPaused] = useState(false);
 
-  const maxIndex = books.length - 5;
+  const maxIndex = Math.max(0, books.length - 5);
 
   const slideTo = (newIndex) => {
     setIsTransitioning(true); 
@@ -130,14 +140,15 @@ const Highlights = ({ books }) => {
     }, 150); 
   };
 
-  // Auto slide sau mỗi 3 giây
+  // Auto slide sau mỗi 3 giây, nhưng dừng khi paused
   useEffect(() => {
     if (books.length === 0) return;
+    if (paused) return;
     const timer = setInterval(() => {
-      setCurrentIndex(prev => (prev + 1) % (books.length - 5));
+      setCurrentIndex(prev => (prev + 1) % (Math.max(1, books.length - 5)));
     }, 3000);
     return () => clearInterval(timer); 
-  }, [books.length, currentIndex]);
+  }, [books.length, paused]);
 
   const handlePrev = () => slideTo(currentIndex <= 0 ? maxIndex : currentIndex - 1);
   const handleNext = () => slideTo(currentIndex >= maxIndex ? 0 : currentIndex + 1);
@@ -168,10 +179,14 @@ const Highlights = ({ books }) => {
           {visibleBooks.map((book, idx) => (
             <BookCard
               key={currentIndex + idx}
+              id={book.id}
               title={book.title}
               author={book.author}
               rating={book.rating}
               cover={book.cover}
+              onAddToWishlist={onAddToWishlist}
+              onHoverStart={() => setPaused(true)}
+              onHoverEnd={() => setPaused(false)}
             />
           ))}
         </div>
@@ -190,6 +205,10 @@ const Highlights = ({ books }) => {
 
 export default function HomePage() {
   const [books, setBooks] = useState([]);
+  const [showWishlistModal, setShowWishlistModal] = useState(false);
+  const [wishlistPayload, setWishlistPayload] = useState(null);
+  const [wishlistNeedsLogin, setWishlistNeedsLogin] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchHotBooks = async () => {
@@ -208,7 +227,46 @@ export default function HomePage() {
     <div className="min-h-screen bg-[#fafafa] font-sans text-gray-900">
       <Navbar />
       <Hero books={books} />       
-      <Highlights books={books} />
+      <Highlights books={books} onAddToWishlist={(payload) => {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          setWishlistNeedsLogin(true);
+          setWishlistPayload(payload);
+          setShowWishlistModal(true);
+        } else {
+          // Here you could call API to add to wishlist. For now show success modal
+          setWishlistNeedsLogin(false);
+          setWishlistPayload(payload);
+          setShowWishlistModal(true);
+        }
+      }} />
+
+      {/* Global wishlist modal */}
+      {showWishlistModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-lg text-center">
+            {wishlistNeedsLogin ? (
+              <>
+                <h3 className="text-lg font-bold mb-2">You haven't logged in yet</h3>
+                <p className="text-sm text-gray-500 mb-6">Log in to add "{wishlistPayload?.title}" to your wishlist.</p>
+                <div className="flex justify-center gap-4">
+                  <button onClick={() => setShowWishlistModal(false)} className="px-4 py-2 rounded-md bg-gray-100">Cancel</button>
+                  <button onClick={() => { setShowWishlistModal(false); navigate('/login'); }} className="px-4 py-2 rounded-md bg-indigo-600 text-white">Log in</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h3 className="text-lg font-bold mb-2">Added to wishlist</h3>
+                <p className="text-sm text-gray-500 mb-6">"{wishlistPayload?.title}" has been added to your wishlist.</p>
+                <div className="flex justify-center gap-4">
+                  <button onClick={() => setShowWishlistModal(false)} className="px-4 py-2 rounded-md bg-gray-100">Close</button>
+                  <button onClick={() => { setShowWishlistModal(false); navigate('/profile'); }} className="px-4 py-2 rounded-md bg-indigo-600 text-white">Go to Profile</button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

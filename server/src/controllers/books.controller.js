@@ -3,35 +3,41 @@ const getRandomBooks = async (req, res) => {
         const { page = 1 } = req.query;
         const maxResults = 10;
         const startIndex = (page - 1) * maxResults;
+        // Use NYT Best Sellers overview to pick random best-seller books
+        const nytRes = await fetch(
+            `https://api.nytimes.com/svc/books/v3/lists/overview.json?api-key=${process.env.NYT_API_KEY}`
+        );
+        const nytData = await nytRes.json();
 
-        // const response = await fetch(
-        //     `https://www.googleapis.com/books/v1/volumes?q=subject:fiction&orderBy=relevance&maxResults=${maxResults}&startIndex=${startIndex}&key=${process.env.GOOGLE_BOOKS_API_KEY}`
-        // );
-
-        const randomLetter = "abcdefghijklmnopqrstuvwxyz"[Math.floor(Math.random() * 26)];
-
-        const response = await fetch(
-            `https://www.googleapis.com/books/v1/volumes?q=${randomLetter}&maxResults=${maxResults}&startIndex=${Math.floor(Math.random() * 100)}&key=${process.env.GOOGLE_BOOKS_API_KEY}`
+        const lists = nytData.results?.lists || [];
+        // flatten all books from all lists
+        const allBooks = lists.flatMap(list =>
+            (list.books || []).map(book => ({ ...book, list_name: list.list_name }))
         );
 
-        const data = await response.json();
-        //console.log("Google API response:", data.items.volumeInfo);
-
-        if (!data.items) {
+        if (!allBooks.length) {
             return res.status(200).json({ books: [], totalPages: 0 });
         }
 
-        const books = data.items.map((item) => ({
-            id: item.id,
-            title: item.volumeInfo.title || "Unknown Title",
-            author: item.volumeInfo.authors?.join(", ") || "Unknown Author",
-            summary: item.volumeInfo.description || "No description available.",
-            rating: item.volumeInfo.averageRating || "N/A",
-            thumbnail: item.volumeInfo.imageLinks?.thumbnail || null,
-            tags: item.volumeInfo.categories || [],
+        // shuffle and take up to maxResults
+        for (let i = allBooks.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [allBooks[i], allBooks[j]] = [allBooks[j], allBooks[i]];
+        }
+
+        const selected = allBooks.slice(0, maxResults);
+
+        const books = selected.map((book) => ({
+            id: book.primary_isbn13 || book.primary_isbn10 || book.title,
+            title: book.title || 'Unknown Title',
+            author: book.author || 'Unknown Author',
+            summary: book.description || book.contributor || 'No description available.',
+            rating: 'N/A',
+            thumbnail: book.book_image || null,
+            tags: [book.list_name].filter(Boolean),
         }));
-        //console.log(books[0].id);
-        return res.status(200).json({ books, totalPages: 10 });
+
+        return res.status(200).json({ books, totalPages: 1 });
     } catch (error) {
         //console.error("Lỗi books controller:", error);
         return res.status(500).json({ message: "Server error", error: error.message });

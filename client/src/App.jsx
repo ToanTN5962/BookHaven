@@ -7,6 +7,7 @@ import ProfilePage from './pages/Profile';
 import ComplaintPage from './pages/ComplaintPage';
 import BookDetail from './pages/BookDetail';
 import AdminDashboard from './pages/AdminDashboard';
+import MyLibraryPage from './pages/MyLibrary';
 import { Book } from 'lucide-react';
 
 function App(){
@@ -19,8 +20,9 @@ function App(){
         <Route path = "/afterlogin" element = {<AfterLoginPage/>}></Route>
         <Route path = "/profile" element = {<ProfilePage/>}></Route>
         <Route path = "/complaint" element = {<ComplaintPage/>}></Route>
-        <Route path = "/books/:bookId" element = {<BookDetail/>}></Route>
+        <Route path = "/books/:bookIsbn" element = {<BookDetail/>}></Route>
         <Route path = "/admin" element = {<AdminDashboard/>}></Route>
+        <Route path = "/mylibrary" element = {<MyLibraryPage/>}></Route>
       </Routes>
     </BrowserRouter>
   );
