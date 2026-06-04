@@ -125,40 +125,40 @@ const BookCard = ({ book, type }) => {
 // Section Config 
 const SECTION_CONFIG = {
   reading: {
-    label: 'Đang đọc',
+    label: 'Reading',
     icon: <BookOpen size={18} />,
     colorIcon: 'text-blue-500',
     colorBadge: 'bg-blue-50 text-blue-700',
     emptyIcon: <BookX size={36} />,
-    emptyText: 'Bạn chưa đang đọc cuốn sách nào',
-    emptySubtext: 'Thêm sách vào danh sách đang đọc để bắt đầu',
+    emptyText: 'You are not reading any books',
+    emptySubtext: 'Add some books to the reading lists',
   },
   wishlist: {
-    label: 'Muốn đọc',
+    label: 'Wishlist',
     icon: <Bookmark size={18} />,
     colorIcon: 'text-amber-500',
     colorBadge: 'bg-amber-50 text-amber-700',
     emptyIcon: <BookMarked size={36} />,
-    emptyText: 'Chưa có sách nào trong danh sách muốn đọc',
-    emptySubtext: 'Khám phá sách và thêm vào wishlist của bạn',
+    emptyText: 'You don\'t have any books in your wishlist',
+    emptySubtext: 'Let\'s explore new books and add them to your wishlist',
   },
   read: {
-    label: 'Đã đọc',
+    label: 'Read',
     icon: <CheckCircle size={18} />,
     colorIcon: 'text-emerald-500',
     colorBadge: 'bg-emerald-50 text-emerald-700',
     emptyIcon: <CheckCircle size={36} />,
-    emptyText: 'Bạn chưa hoàn thành cuốn sách nào',
-    emptySubtext: 'Đánh dấu hoàn thành những cuốn bạn đã đọc xong',
+    emptyText: 'You have\'t completed any books',
+    emptySubtext: 'Mark your completed books',
   },
   drop: {
-    label: 'Đã bỏ',
+    label: 'Drop',
     icon: <XCircle size={18} />,
     colorIcon: 'text-red-400',
     colorBadge: 'bg-red-50 text-red-600',
     emptyIcon: <Smile size={36} />,
-    emptyText: 'Bạn chưa bỏ sách nào',
-    emptySubtext: 'Tốt lắm! Hãy tiếp tục duy trì thói quen đọc sách',
+    emptyText: 'You haven\'t dropped any books',
+    emptySubtext: 'Amazing! Try to maintain your reading habit',
   },
 };
 
@@ -238,11 +238,22 @@ export default function MyLibraryPage() {
       try {
         const res = await fetch(`http://localhost:3000/api/users/getbookshelfinfo/${user.id}`);
         const data = await res.json();
+
+        const normalize = (list) => (Array.isArray(list) ? list.map(b => ({
+          id: b.id,
+          title: b.title,
+          cover: b.imageUrl || b.cover || b.thumbnail || null,
+          author: b.author || b.authors || '',
+          progress: b.progress ?? null,
+          rating: b.rating ?? null,
+          addedAt: b.addedAt || b.addedAt || null,
+        })) : []);
+
         setLibrary({
-          reading: data.stats.reading || [],
-          wishlist: data.stats.wishlist || [],
-          read: data.stats.read || [],
-          drop: data.stats.drop || [],
+          reading: normalize(data.reading || []),
+          wishlist: normalize(data.wishlist || []),
+          read: normalize(data.read || []),
+          drop: normalize(data.drop || []),
         });
       } catch (err) {
         console.error("Error fetching library:", err);

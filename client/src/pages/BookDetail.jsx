@@ -297,6 +297,49 @@ export default function BookDetail() {
   const [wished,       setWished]       = useState(false);
   const [descExpanded, setDescExpanded] = useState(false);
 
+  const handleSetStatus = async (value) => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/login');
+      return;
+    }
+
+    try {
+      const payload = {
+        status: value,
+        book: {
+          id: typeof book.id === 'number' ? book.id : undefined,
+          title: book.title,
+          author: book.author,
+          thumbnail: book.thumbnail || book.imageUrl || null,
+          publisher: book.publisher || '',
+          publishedDate: book.publishedDate || '',
+          pageCount: book.pageCount || null,
+          language: book.language || ''
+        }
+      };
+
+      const res = await fetch('http://localhost:3000/api/users/shelf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        console.error('Failed to update shelf', err);
+        alert('Could not update shelf');
+        return;
+      }
+
+      setStatus(value);
+      setShowDropdown(false);
+    } catch (err) {
+      console.error('Error updating shelf:', err);
+      alert('Error updating shelf');
+    }
+  };
+
   useEffect(() => {
     const fetchBook = async () => {
       setLoading(true);
@@ -390,18 +433,18 @@ export default function BookDetail() {
 
                 {showDropdown && (
                   <div className="absolute top-full left-0 mt-2 w-full bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-10">
-                    {STATUSES.map(s => (
-                      <button
-                        key={s.value}
-                        onClick={() => { setStatus(s.value); setShowDropdown(false); }}
-                        className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium hover:bg-gray-50 transition-colors ${
-                          status === s.value ? 'text-indigo-600 font-bold' : 'text-gray-700'
-                        }`}
-                      >
-                        <span className={`p-1 rounded-lg ${s.color}`}>{s.icon}</span>
-                        {s.label}
-                      </button>
-                    ))}
+                        {STATUSES.map(s => (
+                          <button
+                            key={s.value}
+                            onClick={() => handleSetStatus(s.value)}
+                            className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium hover:bg-gray-50 transition-colors ${
+                              status === s.value ? 'text-indigo-600 font-bold' : 'text-gray-700'
+                            }`}
+                          >
+                            <span className={`p-1 rounded-lg ${s.color}`}>{s.icon}</span>
+                            {s.label}
+                          </button>
+                        ))}
                     {status && (
                       <button
                         onClick={() => { setStatus(null); setShowDropdown(false); }}

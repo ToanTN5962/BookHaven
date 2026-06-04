@@ -96,7 +96,57 @@ const getBookshelfInfo = async (req, res) => {
   }
 };
 
+const addToShelf = async (req, res) => {
+  try {
+    const userId = Number(req.user.sub);
+    const { status, book } = req.body;
+
+    if (!status || !book) return res.status(400).json({ message: 'Missing status or book' });
+
+    // Determine or create Book record
+    let bookId = null;
+
+    if (book.id && Number.isInteger(book.id)) {
+      const found = await prisma.book.findUnique({ where: { id: book.id } });
+      if (found) bookId = found.id;
+    }
+
+    if (!bookId && book.title) {
+      const found = await prisma.book.findFirst({ where: { title: book.title } });
+      if (found) bookId = found.id;
+    }
+
+    if (!bookId) {
+      const publishedYear = book.publishedDate ? parseInt((book.publishedDate + '').slice(0,4)) || 0 : 0;
+      const created = await prisma.book.create({
+        data: {
+          title: book.title || 'Untitled',
+          publishedYear,
+          publisher: book.publisher || '',
+          description: book.description || '',
+          language: book.language || 'en',
+          imageUrl: book.thumbnail || book.imageUrl || null,
+        }
+      });
+      bookId = created.id;
+    }
+
+    // upsert userBook by compound unique (userId_bookId)
+    const userBook = await prisma.userBook.upsert({
+      where: { userId_bookId: { userId, bookId } },
+      update: { status },
+      create: { user: { connect: { id: userId } }, book: { connect: { id: bookId } }, status }
+    });
+
+    return res.status(200).json({ message: 'Shelf updated', userBook });
+  } catch (error) {
+    console.error('Error in addToShelf:', error);
+    return res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
 module.exports = {
     getInfo,
-    getBookshelfInfo
+    getBookshelfInfo,
+    addToShelf
 };

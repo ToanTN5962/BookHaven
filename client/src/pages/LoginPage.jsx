@@ -51,7 +51,8 @@ const LoginPage = () => {
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
         alert("Login successfully!");
-        navigate('/afterlogin');
+        if(data.user.role == "USER") navigate('/afterlogin');
+        else navigate('/admin');
       }
       else{
         alert(data.message || "Login failed!");
