@@ -8,6 +8,7 @@ import ComplaintPage from './pages/ComplaintPage';
 import BookDetail from './pages/BookDetail';
 import AdminDashboard from './pages/AdminDashboard';
 import MyLibraryPage from './pages/MyLibrary';
+import SearchResults from './pages/SearchResults';
 import { Book } from 'lucide-react';
 
 function App(){
@@ -23,6 +24,7 @@ function App(){
         <Route path = "/books/:bookIsbn" element = {<BookDetail/>}></Route>
         <Route path = "/admin" element = {<AdminDashboard/>}></Route>
         <Route path = "/mylibrary" element = {<MyLibraryPage/>}></Route>
+        <Route path = "/search" element = {<SearchResults/>}></Route>
       </Routes>
     </BrowserRouter>
   );
