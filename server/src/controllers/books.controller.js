@@ -1,3 +1,5 @@
+const prisma = require("../prisma/client");
+
 const getRandomBooks = async (req, res) => {
     try {
         const { page = 1 } = req.query;
@@ -44,11 +46,46 @@ const getRandomBooks = async (req, res) => {
     }
 };
 
+const getBookByName = async (req, res) => {
+    try {
+        const q = (req.query.q || req.query.name || '').trim();
+        if (!q) return res.status(400).json({ message: 'Search info is missing' });
+
+        const apiKey = process.env.NYT_API_KEY;
+        if (!apiKey) return res.status(503).json({ message: 'NYT API key not configured' });
+
+        // The NYT 'best-sellers/history' endpoint accepts title param to search history
+        const url = `https://api.nytimes.com/svc/books/v3/lists/best-sellers/history.json?title=${encodeURIComponent(q)}&api-key=${apiKey}`;
+        const resp = await fetch(url);
+        if (!resp.ok) {
+            const text = await resp.text().catch(() => '');
+            return res.status(502).json({ message: 'NYT API error', status: resp.status, body: text });
+        }
+
+        const data = await resp.json();
+        const results = Array.isArray(data.results) ? data.results : [];
+
+        const mapped = results.map((r, i) => ({
+            id: r.primary_isbn13 || r.primary_isbn10 || '',
+            title: r.title || '',
+            author: r.author || '',
+            description: r.description || r.notes || '',
+            publisher: r.publisher || '',
+            publishedDate: r.published_date || null,
+            book_image: r.book_image || null,
+            isbns: r.isbns || [],
+        }));
+
+        return res.status(200).json({ books: mapped, total: mapped.length });
+    } catch (error) {
+        return res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+
 const getBookByIsbn = async (req, res) => {
     try {
         const { bookIsbn } = req.params;
         const isIsbnLike = /^[0-9Xx-]+$/.test(bookIsbn);
-
         const mapGoogleItem = (item) => {
             const info = item.volumeInfo || {};
             return {
@@ -176,5 +213,6 @@ const getTopRated = async(req, res) => {
 module.exports = { 
     getRandomBooks,
     getBookByIsbn,
-    getTopRated
+    getTopRated,
+    getBookByName
 };

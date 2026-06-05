@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   BookOpen, Users, AlertTriangle, Star,
@@ -58,6 +58,12 @@ const TYPE_LABEL = {
   TECHNICAL_ISSUE:      'Technical',
   USER_CONDUCT:         'User Conduct',
   OTHER:                'Other',
+};
+
+const userLabel = (u) => {
+  if (!u) return 'Unknown';
+  if (typeof u === 'string') return u;
+  return u.fullName || u.email || String(u.id || 'Unknown');
 };
 
 // ---------------------------------------------------------------------------
@@ -142,11 +148,11 @@ const AddBookModal = ({ onClose, onSave }) => {
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const [search,      setSearch]      = useState('');
-  const [complaints,  setComplaints]  = useState(MOCK_COMPLAINTS);
-  const [books,       setBooks]       = useState(MOCK_RECENT_BOOKS);
+  const [complaints,  setComplaints]  = useState([]);
+  const [books,       setBooks]       = useState([]);
   const [showAddBook, setShowAddBook] = useState(false);
   const [activeTab,   setActiveTab]   = useState('overview');
-  const [stats,       setStats]       = useState(MOCK_STATS);
+  const [stats,       setStats]       = useState({ totalBooks: 0, totalUsers: 0, pendingComplaints: 0, avgRating: 0 });
   const [filterStatus, setFilterStatus] = useState('All');
 
   const filteredBooks = books.filter(b =>
@@ -159,6 +165,11 @@ export default function AdminDashboard() {
     : complaints.filter(c => c.status === filterStatus);
 
   const pendingCount = complaints.filter(c => c.status === 'SOLVING').length;
+  const complaintCounts = {
+    SOLVING: complaints.filter(c => c.status === 'SOLVING').length,
+    SOLVED: complaints.filter(c => c.status === 'SOLVED').length,
+    REJECTED: complaints.filter(c => c.status === 'REJECTED').length,
+  };
 
   const handleResolve = (id) => {
     setComplaints(prev => prev.map(c => c.id === id ? { ...c, status: 'SOLVED' } : c));
@@ -175,6 +186,59 @@ export default function AdminDashboard() {
     setBooks(prev => [newBook, ...prev]);
     setStats(s => ({ ...s, totalBooks: s.totalBooks + 1 }));
   };
+
+  useEffect(() => {
+    const ac = new AbortController();
+
+    const fetchAdmin = async () => {
+      try {
+        const res = await fetch('http://localhost:3000/api/admin/statinfo', { signal: ac.signal });
+        if (!res.ok) return;
+        const data = await res.json();
+        // map backend `solvingStatus` -> `status` expected by UI
+        const complaintsFromServer = (data.complaints || []).map(c => ({ ...c, status: c.solvingStatus || c.status }));
+        setComplaints(complaintsFromServer);
+        setStats(s => ({
+          totalBooks: data.nyt?.count ?? s.totalBooks,
+          totalUsers: data.user?.userCount ?? s.totalUsers,
+          pendingComplaints: (data.complaintCount && (data.complaintCount.SOLVING || data.complaintCount.SOLVING === 0)) ? (data.complaintCount.SOLVING || 0) : complaintsFromServer.filter(c => c.status === 'SOLVING').length,
+          avgRating: s.avgRating,
+        }));
+      } catch (e) {
+        // ignore for now
+      }
+    };
+
+    const fetchTopRated = async () => {
+      try {
+        const res = await fetch('http://localhost:3000/api/books/toprate');
+        if (!res.ok) return;
+        const data = await res.json();
+        const list = Array.isArray(data) ? data : [];
+        const mapped = list.map((b, i) => ({
+          id: b.isbn13 || b.isbn || `${b.title}-${i}`,
+          title: b.title || '',
+          author: b.author || '',
+          year: b.publishedDate ? (('' + b.publishedDate).slice(0,4)) : '',
+          rating: typeof b.rating === 'number' ? b.rating : (b.rating || 'N/A'),
+        }));
+        if (mapped.length) setBooks(mapped);
+
+        const nums = mapped.map(x => Number(x.rating)).filter(n => !isNaN(n));
+        if (nums.length) {
+          const avg = (nums.reduce((a,b) => a+b, 0) / nums.length).toFixed(1);
+          setStats(s => ({ ...s, avgRating: avg }));
+        }
+      } catch (e) {
+        // ignore
+      }
+    };
+
+    fetchAdmin();
+    fetchTopRated();
+
+    return () => ac.abort();
+  }, []);
 
   const TABS = [
     { id: 'overview',   label: 'Overview',   icon: <BarChart3 size={16} /> },
@@ -296,7 +360,7 @@ export default function AdminDashboard() {
                     <h3 className="font-black text-gray-900 flex items-center gap-2">
                       <AlertTriangle size={15} className="text-rose-400" /> Recent Complaints
                     </h3>
-                    <button onClick={() => setActiveTab('complaints')} className="text-xs font-bold text-indigo-500 hover:text-indigo-700 flex items-center gap-1">
+                    <button onClick={() => { setFilterStatus('All'); setActiveTab('complaints'); }} className="text-xs font-bold text-indigo-500 hover:text-indigo-700 flex items-center gap-1">
                       View all <ChevronRight size={13} />
                     </button>
                   </div>
@@ -312,7 +376,7 @@ export default function AdminDashboard() {
                           </span>
                         </div>
                         <p className="text-sm text-gray-700 font-medium truncate">{c.description}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">{c.user} · {c.createdAt}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">{userLabel(c.user)} · {c.createdAt}</p>
                       </div>
                     ))}
                   </div>
@@ -426,6 +490,20 @@ export default function AdminDashboard() {
           {/* ── COMPLAINTS TAB ── */}
           {activeTab === 'complaints' && (
             <div className="space-y-4">
+              {/* Counts summary */}
+              <div className="grid grid-cols-3 gap-4">
+                {['SOLVING', 'SOLVED', 'REJECTED'].map(k => (
+                  <div key={k} className="bg-white rounded-xl border border-gray-100 p-4 flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-gray-500 font-bold">{STATUS_CONFIG[k].label}</p>
+                      <p className="text-2xl font-black text-gray-900">{complaintCounts[k]}</p>
+                    </div>
+                    <div className="ml-4">
+                      <span className={`${STATUS_CONFIG[k].color} px-3 py-1 rounded-full text-xs font-black`}>{STATUS_CONFIG[k].icon}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
               {/* Filter pills */}
               <div className="flex gap-2">
                 {['All', 'SOLVING', 'SOLVED', 'REJECTED'].map(f => {
@@ -467,7 +545,7 @@ export default function AdminDashboard() {
                         </span>
                       </div>
                       <p className="text-sm text-gray-700 font-medium">{c.description}</p>
-                      <p className="text-xs text-gray-400 mt-1">{c.user} · {c.createdAt}</p>
+                      <p className="text-xs text-gray-400 mt-1">{userLabel(c.user)} · {c.createdAt}</p>
                     </div>
                     {c.status === 'SOLVING' && (
                       <div className="flex gap-2 flex-shrink-0">

@@ -2,21 +2,31 @@ const prisma = require("../prisma/client");
 
 const getStatInfo = async (req, res) => {
     try {
-        const bookCount = await prisma.user.count({
+        const userStat = await prisma.user.findMany({
             where: {
                 role: 'USER',
             },
         });
-        const solvingComplaint = await prisma.complaint.findMany({
-            where: {
-                solvingStatus: 'SOLVING',
-            },
-            orderBy: {
-                createdAt: 'desc'
+
+        const userCount = userStat.length;
+
+        const complaintStat = await prisma.complaint.groupBy({
+            by: ['solvingStatus'],
+            _count: {
+                solvingStatus: true
             }
         });
 
-        const complaintCount = solvingComplaint.length;
+        const complaintCount = complaintStat.reduce((acc, item) => {
+            acc[item.solvingStatus] = item._count.solvingStatus;
+            return acc;
+        }, {});
+
+        const complaintsList = await prisma.complaint.findMany({
+            orderBy: { createdAt: 'desc' },
+            include: { user: { select: { id: true, email: true, fullName: true } }, handledBy: { select: { id: true, fullName: true } } },
+            take: 100
+        });
 
         const nytList = req.query.nytList || 'hardcover-fiction';
         let nytCount = null;
@@ -37,9 +47,10 @@ const getStatInfo = async (req, res) => {
         }
 
         return res.status(200).json({
-            bookCount,
+            user: {listUser: userStat, userCount: userCount},
             complaintCount,
-            solvingComplaint,
+            complaintStat,
+            complaints: complaintsList,
             nyt: { list: nytList, count: nytCount }
         });
     }
