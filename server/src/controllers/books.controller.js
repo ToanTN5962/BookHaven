@@ -27,9 +27,11 @@ const getRandomBooks = async (req, res) => {
             [allBooks[i], allBooks[j]] = [allBooks[j], allBooks[i]];
         }
 
-        const selected = allBooks.slice(0, maxResults);
+        // paginate the shuffled list using requested page
+        const pageNum = Number(page) || 1;
+        const selected = allBooks.slice((pageNum - 1) * maxResults, (pageNum - 1) * maxResults + maxResults);
 
-        const books = selected.map((book) => ({
+        const books = (selected || []).map((book) => ({
             id: book.primary_isbn13 || book.primary_isbn10 || book.title,
             title: book.title || 'Unknown Title',
             author: book.author || 'Unknown Author',
@@ -39,7 +41,10 @@ const getRandomBooks = async (req, res) => {
             tags: [book.list_name].filter(Boolean),
         }));
 
-        return res.status(200).json({ books, totalPages: 1 });
+        const totalPages = Math.max(1, Math.ceil(allBooks.length / maxResults));
+
+        // include counts for debugging/visibility
+        return res.status(200).json({ books, totalPages, totalBooks: allBooks.length, listsCount: lists.length });
     } catch (error) {
         //console.error("Lỗi books controller:", error);
         return res.status(500).json({ message: "Server error", error: error.message });

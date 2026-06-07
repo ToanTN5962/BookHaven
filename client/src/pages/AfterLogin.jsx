@@ -233,24 +233,79 @@ const DetailedBookCard = ({ book }) => {
 export default function AfterLoginPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [books, setBooks] = useState([]);
+  const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let ac = new AbortController();
     const fetchBooks = async () => {
       setLoading(true);
       try {
-        const response = await fetch(`http://localhost:3000/api/books/random?page=${currentPage}`);
+        const response = await fetch(`http://localhost:3000/api/books/random?page=${currentPage}`, { signal: ac.signal });
+        console.log('fetch random books status', response.status);
+        if (!response.ok) {
+          console.warn('Books API returned non-OK status');
+          setBooks([]);
+          return;
+        }
         const data = await response.json();
-        setBooks(data.books);
+        console.log('books api data', data);
+        setBooks((data && data.books) || []);
+        setTotalPages(data && data.totalPages ? Number(data.totalPages) : 1);
       } catch (error) {
+        if (error.name === 'AbortError') return;
         console.error("Error fetching books:", error);
+        setBooks([]);
       } finally {
         setLoading(false);
       }
     };
 
     fetchBooks();
+    return () => ac.abort();
   }, [currentPage]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [totalPages]);
+
+  const buildPagination = () => {
+    const tp = Number(totalPages) || 1;
+    const cp = Number(currentPage) || 1;
+    const items = [];
+    if (tp <= 6) {
+      for (let i = 1; i <= tp; i++) items.push({ type: 'page', page: i });
+      return items;
+    }
+
+    if (cp <= 3) {
+      items.push({ type: 'page', page: 1 });
+      items.push({ type: 'page', page: 2 });
+      items.push({ type: 'page', page: 3 });
+      items.push({ type: 'ellipsis', direction: 'right' });
+      items.push({ type: 'page', page: tp });
+      return items;
+    }
+
+    if (cp >= tp - 2) {
+      items.push({ type: 'page', page: 1 });
+      items.push({ type: 'ellipsis', direction: 'left' });
+      items.push({ type: 'page', page: tp - 2 });
+      items.push({ type: 'page', page: tp - 1 });
+      items.push({ type: 'page', page: tp });
+      return items;
+    }
+
+    // middle
+    items.push({ type: 'page', page: 1 });
+    items.push({ type: 'ellipsis', direction: 'left' });
+    items.push({ type: 'page', page: cp - 1 });
+    items.push({ type: 'page', page: cp });
+    items.push({ type: 'page', page: cp + 1 });
+    items.push({ type: 'ellipsis', direction: 'right' });
+    items.push({ type: 'page', page: tp });
+    return items;
+  };
 
   // const hotBooks = Array(10).fill({
   //   title: "The Radiant Dark",
@@ -260,7 +315,7 @@ export default function AfterLoginPage() {
   //   tags: ["Sci-Fi", "Fiction"]
   // });
 
-  return (
+    return (
     <div className="min-h-screen bg-[#fafafa] font-sans text-gray-900">
       <AfterLoginHeader />
       
@@ -284,7 +339,7 @@ export default function AfterLoginPage() {
                   <ChevronLeft size={20} />
                 </button>
                 <button className="p-2 border border-gray-200 rounded-xl hover:bg-white transition-colors"
-                        onClick={() => setCurrentPage(p => p + 1)}>
+                  onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}>
                   <ChevronRight size={20} />
                 </button>
               </div>
@@ -301,23 +356,60 @@ export default function AfterLoginPage() {
             </div>
 
             {/* Pagination Controls */}
-            <div className="mt-12 flex justify-center items-center gap-4">
-              <span className="text-sm text-gray-500 font-medium">Page {currentPage} of 10</span>
-              <div className="flex gap-1">
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
-                  <button 
-                    key={num}
-                    onClick={() => setCurrentPage(num)}
-                    className={`w-10 h-10 rounded-xl font-bold transition-all ${
-                      currentPage === num 
-                      ? "bg-indigo-600 text-white shadow-lg" 
-                      : "bg-white text-gray-400 hover:bg-gray-50"
-                    }`}
-                  >
-                    {num}
-                  </button>
-                ))}
+            <div className="mt-12 flex flex-col items-center gap-3">
+              <div className="flex items-center gap-4">
+                <button
+                  className="p-2 border border-gray-200 rounded-xl hover:bg-white transition-colors disabled:opacity-50"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                >
+                  <ChevronLeft size={20} />
+                </button>
+
+                <div className="flex gap-1 items-center">
+                  {buildPagination().map((it, idx) => {
+                    if (it.type === 'page') {
+                      return (
+                        <button
+                          key={`p-${it.page}-${idx}`}
+                          onClick={() => setCurrentPage(it.page)}
+                          className={`w-10 h-10 rounded-xl font-bold transition-all ${
+                            currentPage === it.page
+                              ? "bg-indigo-600 text-white shadow-lg"
+                              : "bg-white text-gray-400 hover:bg-gray-50"
+                          }`}
+                        >
+                          {it.page}
+                        </button>
+                      );
+                    }
+
+                    // ellipsis
+                    return (
+                      <button
+                        key={`e-${idx}`}
+                        onClick={() => {
+                          if (it.direction === 'right') setCurrentPage(p => Math.min(totalPages, p + 2));
+                          else setCurrentPage(p => Math.max(1, p - 2));
+                        }}
+                        className="w-10 h-10 rounded-xl font-bold transition-all bg-white text-gray-400 hover:bg-gray-50"
+                        title={it.direction === 'right' ? 'Jump forward 2 pages' : 'Jump back 2 pages'}
+                      >
+                        ...
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <button
+                  className="p-2 border border-gray-200 rounded-xl hover:bg-white transition-colors disabled:opacity-50"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                >
+                  <ChevronRight size={20} />
+                </button>
               </div>
+              <div className="text-sm text-gray-500 font-medium">Page {currentPage} of {totalPages}</div>
             </div>
           </section>
         </div>

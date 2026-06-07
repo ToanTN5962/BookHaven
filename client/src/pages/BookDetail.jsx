@@ -12,9 +12,9 @@ import {
 // ---------------------------------------------------------------------------
 const STATUSES = [
   { value: 'READING',      label: 'Reading',      icon: <BookOpen size={14} />,    color: 'bg-blue-50 text-blue-600' },
-  { value: 'WANT_TO_READ', label: 'Want to Read', icon: <BookMarked size={14} />,  color: 'bg-amber-50 text-amber-600' },
-  { value: 'COMPLETED',    label: 'Completed',    icon: <CheckCircle size={14} />, color: 'bg-emerald-50 text-emerald-600' },
-  { value: 'DROPPED',      label: 'Dropped',      icon: <XCircle size={14} />,     color: 'bg-red-50 text-red-500' },
+  { value: 'WISHLIST', label: 'Want to Read', icon: <BookMarked size={14} />,  color: 'bg-amber-50 text-amber-600' },
+  { value: 'READ',    label: 'Completed',    icon: <CheckCircle size={14} />, color: 'bg-emerald-50 text-emerald-600' },
+  { value: 'DROP',      label: 'Dropped',      icon: <XCircle size={14} />,     color: 'bg-red-50 text-red-500' },
 ];
 
 const MOCK_REVIEWS = [
@@ -388,7 +388,7 @@ export default function BookDetail() {
         </button>
         <h1
           className="text-xl font-black text-indigo-600 tracking-tight cursor-pointer"
-          onClick={() => navigate('/')}
+          onClick={() => navigate('/afterlogin')}
         >
           BOOKHAVEN
         </h1>
