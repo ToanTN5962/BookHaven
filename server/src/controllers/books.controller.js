@@ -1,4 +1,5 @@
 const prisma = require("../prisma/client");
+const redisClient = require("../utils/redisClient");
 
 const getRandomBooks = async (req, res) => {
     try {
@@ -6,10 +7,40 @@ const getRandomBooks = async (req, res) => {
         const maxResults = 10;
         const startIndex = (page - 1) * maxResults;
         // Use NYT Best Sellers overview to pick random best-seller books
-        const nytRes = await fetch(
-            `https://api.nytimes.com/svc/books/v3/lists/overview.json?api-key=${process.env.NYT_API_KEY}`
-        );
-        const nytData = await nytRes.json();
+        // Try Redis cache first to avoid hitting NYT repeatedly
+        const cacheKey = 'nyt:overview';
+        let nytData = null;
+        try {
+                const tStart = Date.now();
+                const cached = await redisClient.get(cacheKey);
+                const tGet = Date.now() - tStart;
+                if (cached) {
+                    console.log(`Redis GET hit (ms): ${tGet}`);
+                    nytData = JSON.parse(cached);
+                } else {
+                    console.log(`Redis GET miss (ms): ${tGet}`);
+                }
+        } catch (err) {
+            console.warn('Redis GET error', err && err.message ? err.message : err);
+        }
+
+        if (!nytData) {
+                const tFetchStart = Date.now();
+                const nytRes = await fetch(
+                    `https://api.nytimes.com/svc/books/v3/lists/overview.json?api-key=${process.env.NYT_API_KEY}`
+                );
+                nytData = await nytRes.json();
+                const tFetch = Date.now() - tFetchStart;
+                console.log(`NYT fetch time (ms): ${tFetch}, status: ${nytRes.status}`);
+
+            try {
+                // cache for 1 hour
+                    await redisClient.setEx(cacheKey, 3600, JSON.stringify(nytData));
+                    console.log('Cached NYT overview in Redis');
+            } catch (err) {
+                console.warn('Redis SET error', err && err.message ? err.message : err);
+            }
+        }
 
         const lists = nytData.results?.lists || [];
         // flatten all books from all lists
@@ -167,10 +198,25 @@ const getBookByIsbn = async (req, res) => {
 const getTopRated = async(req, res) => {
     //console.log("Running get top rated");
     try{
-        const nytRes = await fetch(
-            `https://api.nytimes.com/svc/books/v3/lists/overview.json?api-key=${process.env.NYT_API_KEY}`
-        );
-        const { results } = await nytRes.json();
+        // try use cached overview
+        const cacheKey = 'nyt:overview';
+        let nytData = null;
+        try {
+            const cached = await redisClient.get(cacheKey);
+            if (cached) nytData = JSON.parse(cached);
+        } catch (e) {
+            console.warn('Redis GET error', e && e.message ? e.message : e);
+        }
+
+        if (!nytData) {
+            const nytRes = await fetch(
+                `https://api.nytimes.com/svc/books/v3/lists/overview.json?api-key=${process.env.NYT_API_KEY}`
+            );
+            nytData = await nytRes.json();
+            try { await redisClient.setEx(cacheKey, 3600, JSON.stringify(nytData)); } catch (e) { /* noop */ }
+        }
+
+        const { results } = nytData;
 
         //Lay cuốn sách hot nhất của mỗi thể loại
         const topBooks = results.lists.map(list => ({
