@@ -87,11 +87,68 @@ const getBookByName = async (req, res) => {
         const q = (req.query.q || req.query.name || '').trim();
         if (!q) return res.status(400).json({ message: 'Search info is missing' });
 
-        const apiKey = process.env.NYT_API_KEY;
-        if (!apiKey) return res.status(503).json({ message: 'NYT API key not configured' });
+        const googleKey = process.env.GOOGLE_BOOKS_API_KEY;
+        // Query Google Books first
+        try {
+            const gUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}${googleKey ? `&key=${googleKey}` : ''}`;
+            const gResp = await fetch(gUrl);
+            if (gResp.ok) {
+                const gData = await gResp.json();
+                const items = Array.isArray(gData.items) ? gData.items : [];
 
-        // The NYT 'best-sellers/history' endpoint accepts title param to search history
-        const url = `https://api.nytimes.com/svc/books/v3/lists/best-sellers/history.json?title=${encodeURIComponent(q)}&api-key=${apiKey}`;
+                if (items.length > 0) {
+                    // Map Google results, and if some important fields are missing, try to supplement from NYT
+                    const mapped = await Promise.all(items.map(async (item) => {
+                        const info = item.volumeInfo || {};
+                        const result = {
+                            id: item.id || (info.industryIdentifiers ? (info.industryIdentifiers[0]?.identifier || '') : ''),
+                            title: info.title || '',
+                            author: info.authors?.join(', ') || '',
+                            description: info.description || info.subtitle || '',
+                            publisher: info.publisher || '',
+                            publishedDate: info.publishedDate || '',
+                            book_image: info.imageLinks?.thumbnail || info.imageLinks?.smallThumbnail || null,
+                            rating: info.averageRating || null,
+                            ratingsCount: info.ratingsCount || null,
+                            isbns: info.industryIdentifiers || [],
+                        };
+
+                        // If some important fields are missing, try NYT lookup by title
+                        const needSupplement = (!result.description || !result.book_image || !result.publisher || !result.publishedDate);
+                        if (needSupplement && process.env.NYT_API_KEY) {
+                            try {
+                                const nytUrl = `https://api.nytimes.com/svc/books/v3/lists/best-sellers/history.json?title=${encodeURIComponent(result.title || q)}&api-key=${process.env.NYT_API_KEY}`;
+                                const nytResp = await fetch(nytUrl);
+                                if (nytResp.ok) {
+                                    const nytData = await nytResp.json();
+                                    const match = Array.isArray(nytData.results) ? nytData.results.find(r => (r.title || '').toLowerCase().includes((result.title||q).toLowerCase())) : null;
+                                    if (match) {
+                                        result.description = result.description || match.description || '';
+                                        result.publisher = result.publisher || match.publisher || '';
+                                        result.publishedDate = result.publishedDate || match.published_date || '';
+                                        result.book_image = result.book_image || null; // NYT history may not provide image
+                                        // include NYT ids if google missing
+                                        result.id = result.id || match.primary_isbn13 || match.primary_isbn10 || match.title;
+                                    }
+                                }
+                            } catch (e) { /* ignore NYT supplement errors */ }
+                        }
+
+                        return result;
+                    }));
+
+                    return res.status(200).json({ books: mapped, total: mapped.length });
+                }
+            }
+        } catch (e) {
+            // fall through to NYT fallback
+        }
+
+        // If Google returned nothing or failed, fallback to NYT
+        const nytKey = process.env.NYT_API_KEY;
+        if (!nytKey) return res.status(503).json({ message: 'No search results and NYT API key not configured' });
+
+        const url = `https://api.nytimes.com/svc/books/v3/lists/best-sellers/history.json?title=${encodeURIComponent(q)}&api-key=${nytKey}`;
         const resp = await fetch(url);
         if (!resp.ok) {
             const text = await resp.text().catch(() => '');
@@ -101,8 +158,8 @@ const getBookByName = async (req, res) => {
         const data = await resp.json();
         const results = Array.isArray(data.results) ? data.results : [];
 
-        const mapped = results.map((r, i) => ({
-            id: r.primary_isbn13 || r.primary_isbn10 || '',
+        const mapped = results.map((r) => ({
+            id: r.primary_isbn13 || r.primary_isbn10 || r.title || '',
             title: r.title || '',
             author: r.author || '',
             description: r.description || r.notes || '',

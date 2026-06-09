@@ -307,14 +307,6 @@ export default function AfterLoginPage() {
     return items;
   };
 
-  // const hotBooks = Array(10).fill({
-  //   title: "The Radiant Dark",
-  //   author: "Alexandra Oliva",
-  //   summary: "Arrival meets Wild Dark Shore in this captivating novel that follows a family for over fifty years—a bold and compassionate exploration of the universe around us and what it truly means to be human...",
-  //   rating: 4.06,
-  //   tags: ["Sci-Fi", "Fiction"]
-  // });
-
     return (
     <div className="min-h-screen bg-[#fafafa] font-sans text-gray-900">
       <AfterLoginHeader />
