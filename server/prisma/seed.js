@@ -4,7 +4,7 @@ const bcrypt = require("bcrypt");
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("🌱 Bắt đầu seed dữ liệu...");
+  console.log("🌱 Bắt đầu seed dữ liệu với Schema mới...");
 
   // ───────────────────────────────────────────
   // 1. USERS
@@ -93,88 +93,59 @@ async function main() {
   // ───────────────────────────────────────────
   // 2. AUTHORS
   // ───────────────────────────────────────────
-  const authors = await Promise.all([
-    prisma.author.create({
-      data: {
-        fullName: "Nguyễn Nhật Ánh",
-        sex: "MALE",
-        dateOfBirth: new Date("1955-05-07"),
-        description: "Nhà văn nổi tiếng Việt Nam, tác giả của nhiều tác phẩm văn học thiếu nhi và tuổi mới lớn.",
-      },
-    }),
-    prisma.author.create({
-      data: {
-        fullName: "Nam Quốc Chánh",
-        sex: "MALE",
-        dateOfBirth: new Date("1970-03-12"),
-        description: "Tác giả chuyên viết về tâm lý và phát triển bản thân.",
-      },
-    }),
-    prisma.author.create({
-      data: {
-        fullName: "J.K. Rowling",
-        sex: "FEMALE",
-        dateOfBirth: new Date("1965-07-31"),
-        description: "Tác giả người Anh nổi tiếng với series Harry Potter.",
-      },
-    }),
-    prisma.author.create({
-      data: {
-        fullName: "George Orwell",
-        sex: "MALE",
-        dateOfBirth: new Date("1903-06-25"),
-        description: "Nhà văn và nhà báo người Anh, nổi tiếng với các tác phẩm phê phán chính trị.",
-      },
-    }),
-    prisma.author.create({
-      data: {
-        fullName: "Paulo Coelho",
-        sex: "MALE",
-        dateOfBirth: new Date("1947-08-24"),
-        description: "Nhà văn người Brazil, tác giả của The Alchemist.",
-      },
-    }),
-    prisma.author.create({
-      data: {
-        fullName: "Haruki Murakami",
-        sex: "MALE",
-        dateOfBirth: new Date("1949-01-12"),
-        description: "Nhà văn người Nhật nổi tiếng với phong cách viết huyền ảo và hiện thực.",
-      },
-    }),
-    prisma.author.create({
-      data: {
-        fullName: "Tô Hoài",
-        sex: "MALE",
-        dateOfBirth: new Date("1920-09-27"),
-        description: "Nhà văn Việt Nam nổi tiếng với Dế Mèn Phiêu Lưu Ký.",
-      },
-    }),
-  ]);
+  // Dùng upsert theo id cố định để tránh bị crash khi chạy lại seed
+  const authorsData = [
+    { id: 1, fullName: "Nguyễn Nhật Ánh", sex: "MALE", dateOfBirth: new Date("1955-05-07"), description: "Nhà văn nổi tiếng Việt Nam." },
+    { id: 2, fullName: "Nam Quốc Chánh", sex: "MALE", dateOfBirth: new Date("1970-03-12"), description: "Tác giả chuyên viết về tâm lý." },
+    { id: 3, fullName: "J.K. Rowling", sex: "FEMALE", dateOfBirth: new Date("1965-07-31"), description: "Tác giả người Anh nổi tiếng với Harry Potter." },
+    { id: 4, fullName: "George Orwell", sex: "MALE", dateOfBirth: new Date("1903-06-25"), description: "Nhà văn và nhà báo người Anh phê phán chính trị." },
+    { id: 5, fullName: "Paulo Coelho", sex: "MALE", dateOfBirth: new Date("1947-08-24"), description: "Nhà văn người Brazil, tác giả của Nhà Giả Kim." },
+    { id: 6, fullName: "Haruki Murakami", sex: "MALE", dateOfBirth: new Date("1949-01-12"), description: "Nhà văn người Nhật nổi tiếng với phong cách huyền ảo." },
+    { id: 7, fullName: "Tô Hoài", sex: "MALE", dateOfBirth: new Date("1920-09-27"), description: "Nhà văn Việt Nam nổi tiếng với Dế Mèn Phiêu Lưu Ký." },
+  ];
 
+  const authors = await Promise.all(
+    authorsData.map((author) =>
+      prisma.author.upsert({
+        where: { id: author.id },
+        update: {},
+        create: author,
+      })
+    )
+  );
   console.log("✅ Đã tạo authors");
 
   // ───────────────────────────────────────────
   // 3. GENRES
   // ───────────────────────────────────────────
-  const genres = await Promise.all([
-    prisma.genre.create({ data: { name: "Văn học Việt Nam" } }),
-    prisma.genre.create({ data: { name: "Tiểu thuyết" } }),
-    prisma.genre.create({ data: { name: "Phát triển bản thân" } }),
-    prisma.genre.create({ data: { name: "Khoa học viễn tưởng" } }),
-    prisma.genre.create({ data: { name: "Trinh thám" } }),
-    prisma.genre.create({ data: { name: "Lịch sử" } }),
-    prisma.genre.create({ data: { name: "Thiếu nhi" } }),
-    prisma.genre.create({ data: { name: "Tâm lý" } }),
-  ]);
+  const genresData = [
+    { id: 1, name: "Văn học Việt Nam" },
+    { id: 2, name: "Tiểu thuyết" },
+    { id: 3, name: "Phát triển bản thân" },
+    { id: 4, name: "Khoa học viễn tưởng" },
+    { id: 5, name: "Trinh thám" },
+    { id: 6, name: "Lịch sử" },
+    { id: 7, name: "Thiếu nhi" },
+    { id: 8, name: "Tâm lý" },
+  ];
 
+  const genres = await Promise.all(
+    genresData.map((genre) =>
+      prisma.genre.upsert({
+        where: { id: genre.id },
+        update: {},
+        create: genre,
+      })
+    )
+  );
   console.log("✅ Đã tạo genres");
 
   // ───────────────────────────────────────────
-  // 4. BOOKS
+  // 4. BOOKS (Đã bổ sung thuộc tính bookIsbn dạng String)
   // ───────────────────────────────────────────
   const booksData = [
     {
+      bookIsbn: "9786041121300", // Thêm ISBN giả lập theo dạng Chuỗi
       title: "Tôi Thấy Hoa Vàng Trên Cỏ Xanh",
       publishedYear: 2010,
       publisher: "NXB Trẻ",
@@ -185,6 +156,7 @@ async function main() {
       genreIdxs: [0, 1],
     },
     {
+      bookIsbn: "9786041162716",
       title: "Mắt Biếc",
       publishedYear: 1990,
       publisher: "NXB Trẻ",
@@ -195,6 +167,7 @@ async function main() {
       genreIdxs: [0, 1],
     },
     {
+      bookIsbn: "9786045814186",
       title: "Đắc Nhân Tâm",
       publishedYear: 2016,
       publisher: "NXB Tổng Hợp",
@@ -205,6 +178,7 @@ async function main() {
       genreIdxs: [2, 7],
     },
     {
+      bookIsbn: "9780747532699",
       title: "Harry Potter và Hòn Đá Phù Thủy",
       publishedYear: 1997,
       publisher: "Bloomsbury",
@@ -215,6 +189,7 @@ async function main() {
       genreIdxs: [1, 6],
     },
     {
+      bookIsbn: "9780451524935",
       title: "1984",
       publishedYear: 1949,
       publisher: "Secker & Warburg",
@@ -225,6 +200,7 @@ async function main() {
       genreIdxs: [1, 3],
     },
     {
+      bookIsbn: "9780062315007",
       title: "Nhà Giả Kim",
       publishedYear: 1988,
       publisher: "HarperCollins",
@@ -235,6 +211,7 @@ async function main() {
       genreIdxs: [1, 2],
     },
     {
+      bookIsbn: "9780375701900",
       title: "Rừng Na-Uy",
       publishedYear: 1987,
       publisher: "Kodansha",
@@ -245,6 +222,7 @@ async function main() {
       genreIdxs: [1, 7],
     },
     {
+      bookIsbn: "9786042185523",
       title: "Dế Mèn Phiêu Lưu Ký",
       publishedYear: 1941,
       publisher: "NXB Kim Đồng",
@@ -255,6 +233,7 @@ async function main() {
       genreIdxs: [0, 6],
     },
     {
+      bookIsbn: "9781400079278",
       title: "Kafka Bên Bờ Biển",
       publishedYear: 2002,
       publisher: "Shinchosha",
@@ -265,6 +244,7 @@ async function main() {
       genreIdxs: [1, 3],
     },
     {
+      bookIsbn: "9786041002364",
       title: "Cho Tôi Xin Một Vé Đi Tuổi Thơ",
       publishedYear: 2008,
       publisher: "NXB Trẻ",
@@ -276,10 +256,14 @@ async function main() {
     },
   ];
 
+  // Chuyển sang dùng upsert dựa theo trường duy nhất `bookIsbn`
   const books = await Promise.all(
     booksData.map((b) =>
-      prisma.book.create({
-        data: {
+      prisma.book.upsert({
+        where: { bookIsbn: b.bookIsbn },
+        update: {},
+        create: {
+          bookIsbn: b.bookIsbn,
           title: b.title,
           publishedYear: b.publishedYear,
           publisher: b.publisher,
@@ -297,7 +281,7 @@ async function main() {
     )
   );
 
-  console.log("✅ Đã tạo books");
+  console.log("✅ Đã tạo hoặc đồng bộ books kèm theo bookIsbn");
 
   // ───────────────────────────────────────────
   // 5. RATINGS
@@ -322,10 +306,18 @@ async function main() {
 
   await Promise.all(
     ratingsData.map(({ userIdx, bookIdx, star }) =>
-      prisma.rating.create({
-        data: {
+      prisma.rating.upsert({
+        where: {
+          userId_bookId: {
+            userId: users[userIdx].id,
+            bookId: books[bookIdx].id,
+          },
+        },
+        update: { star },
+        create: {
           userId: users[userIdx].id,
           bookId: books[bookIdx].id,
+          bookIsbn: books[bookIdx].bookIsbn, // Gán kèm thông tin bookIsbn phụ
           star,
         },
       })
@@ -350,12 +342,18 @@ async function main() {
     { userIdx: 4, bookIdx: 8, content: "Kafka Bên Bờ Biển là một trải nghiệm đọc sách kỳ lạ và tuyệt vời." },
   ];
 
+  // Vì Review không có trường @@unique tổng hợp để làm điểm tựa cho upsert,
+  // chúng ta xóa dữ liệu Review cũ local rồi chạy create để tránh bị nhân bản bản ghi rác khi seed lại.
+  await prisma.reviewLike.deleteMany({});
+  await prisma.review.deleteMany({});
+
   const reviews = await Promise.all(
     reviewsData.map(({ userIdx, bookIdx, content }) =>
       prisma.review.create({
         data: {
           userId: users[userIdx].id,
           bookId: books[bookIdx].id,
+          bookIsbn: books[bookIdx].bookIsbn, // Đồng bộ trường bookIsbn
           content,
         },
       })
@@ -382,8 +380,15 @@ async function main() {
 
   await Promise.all(
     likesData.map(({ userIdx, reviewIdx }) =>
-      prisma.reviewLike.create({
-        data: {
+      prisma.reviewLike.upsert({
+        where: {
+          userId_reviewId: {
+            userId: users[userIdx].id,
+            reviewId: reviews[reviewIdx].id,
+          },
+        },
+        update: {},
+        create: {
           userId: users[userIdx].id,
           reviewId: reviews[reviewIdx].id,
         },
@@ -415,10 +420,18 @@ async function main() {
 
   await Promise.all(
     userBooksData.map(({ userIdx, bookIdx, status }) =>
-      prisma.userBook.create({
-        data: {
+      prisma.userBook.upsert({
+        where: {
+          userId_bookId: {
+            userId: users[userIdx].id,
+            bookId: books[bookIdx].id,
+          },
+        },
+        update: { status },
+        create: {
           userId: users[userIdx].id,
           bookId: books[bookIdx].id,
+          bookIsbn: books[bookIdx].bookIsbn, // Bổ sung thông tin bookIsbn
           status,
         },
       })
@@ -430,6 +443,9 @@ async function main() {
   // ───────────────────────────────────────────
   // 9. COMPLAINTS
   // ───────────────────────────────────────────
+  // Clear dữ liệu rác cũ trước khi nạp mới để không lỗi trùng lặp khi chạy lại lệnh seed nhiều lần
+  await prisma.complaint.deleteMany({});
+
   await Promise.all([
     prisma.complaint.create({
       data: {
@@ -472,7 +488,7 @@ async function main() {
   console.log("✅ Đã tạo complaints");
   console.log("\n🎉 Seed hoàn tất!");
   console.log("📧 Admin: admin@bookhaven.com | 🔑 password123");
-  console.log("📧 User:  toan@gmail.com     | 🔑 password123");
+  console.log("📧 User:  a@gmail.com, b@gmail.com... | 🔑 password123");
 }
 
 main()

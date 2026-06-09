@@ -33,10 +33,11 @@ model User {
 
 model Book {
   id            Int           @id @default(autoincrement())
+  bookIsbn      String?       @unique
   title         String
   publishedYear Int
   publisher     String
-  description   String
+  description   String        @db.Text
   language      String
   imageUrl      String?
   authors       BookAuthor[]
@@ -44,6 +45,11 @@ model Book {
   users         UserBook[]
   rating        Rating[]  
   review        Review[]
+  ratingsByIsbn  Rating[]     @relation("Rating_bookIsbn")
+  reviewsByIsbn  Review[]     @relation("Review_bookIsbn")
+  userBooksByIsbn UserBook[]   @relation("UserBook_bookIsbn")
+  bookGenresByIsbn BookGenre[] @relation("BookGenre_bookIsbn")
+  bookAuthorsByIsbn BookAuthor[] @relation("BookAuthor_bookIsbn")
 }
 
 model Author {
@@ -60,6 +66,8 @@ model Rating {
   star      Decimal   @db.Decimal(2, 1)
   book      Book      @relation(fields: [bookId], references: [id])
   bookId    Int 
+  bookIsbn  String?
+  bookByIsbn Book?    @relation("Rating_bookIsbn", fields: [bookIsbn], references: [bookIsbn])
   user      User      @relation(fields: [userId], references: [id])
   userId    Int
   createdAt DateTime  @default(now())
@@ -73,8 +81,10 @@ model Review {
   content   String
   user      User          @relation(fields: [userId], references: [id])
   userId    Int
-  book      Book          @relation(fields: [bookId], references: [id])
-  bookId    Int
+  book      Book?         @relation(fields: [bookId], references: [id])
+  bookId    Int?
+  bookIsbn  String?
+  bookByIsbn Book?       @relation("Review_bookIsbn", fields: [bookIsbn], references: [bookIsbn])
   likes     ReviewLike[]
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
@@ -86,6 +96,8 @@ model UserBook {
   userId    Int
   book      Book      @relation(fields: [bookId], references: [id])
   bookId    Int
+  bookIsbn  String?
+  bookByIsbn Book?    @relation("UserBook_bookIsbn", fields: [bookIsbn], references: [bookIsbn])
   status    Status    @default(WISHLIST)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -102,6 +114,8 @@ model Genre {
 model BookGenre {
   book      Book    @relation(fields: [bookId], references: [id])
   bookId    Int
+  bookIsbn  String?
+  bookByIsbn Book?  @relation("BookGenre_bookIsbn", fields: [bookIsbn], references: [bookIsbn])
   genre     Genre   @relation(fields: [genreId], references: [id])
   genreId   Int
 
@@ -111,6 +125,8 @@ model BookGenre {
 model BookAuthor {
   book      Book    @relation(fields: [bookId], references: [id])
   bookId    Int
+  bookIsbn  String?
+  bookByIsbn Book?  @relation("BookAuthor_bookIsbn", fields: [bookIsbn], references: [bookIsbn])
   author    Author  @relation(fields: [authorId], references: [id])
   authorId  Int
 

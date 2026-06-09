@@ -215,7 +215,7 @@ const WriteReview = ({ onSubmit }) => {
 // ---------------------------------------------------------------------------
 // Reviews Section
 // ---------------------------------------------------------------------------
-const ReviewsSection = ({ bookIsbn }) => {
+const ReviewsSection = ({ bookIsbn, bookId, book }) => {
   const [reviews, setReviews] = useState(MOCK_REVIEWS);
 
   const handleLike = (reviewId) => {
@@ -227,13 +227,45 @@ const ReviewsSection = ({ bookIsbn }) => {
   };
 
   const handleSubmitReview = async ({ rating, content }) => {
-    // TODO: thay bằng API call thực tế
-    // const token = localStorage.getItem('token');
-    // await fetch('http://localhost:3000/api/reviews', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    //   body: JSON.stringify({ bookId, rating, content }),
-    // });
+    const token = localStorage.getItem('token');
+    const payload = {
+      rating,
+      content,
+      bookIsbn: bookIsbn ? String(bookIsbn).trim() : undefined,
+    };
+
+    if (bookId && typeof bookId === 'number') payload.bookId = bookId;
+
+    // include book metadata so backend can upsert the Book when creating review
+    if (book) {
+      payload.title = book.title || book.name || undefined;
+      payload.author = book.author || (book.authors ? book.authors.join(', ') : undefined);
+      payload.publisher = book.publisher || undefined;
+      // normalize published year: prefer explicit publishedYear, else parse year from publishedDate
+      let py = undefined;
+      if (book.publishedYear) {
+        const n = Number(book.publishedYear);
+        if (!Number.isNaN(n)) py = Math.trunc(n);
+      }
+      if (py === undefined && book.publishedDate) {
+        const m = String(book.publishedDate).match(/(\d{4})/);
+        if (m) py = Number(m[1]);
+      }
+      if (py !== undefined) {
+        payload.publishedYear = py;
+        // also include raw under backup key consumed by backend
+        payload.publishedYearFromClient = py;
+      }
+      payload.imageUrl = book.thumbnail || book.imageUrl || undefined;
+      payload.language = book.language || undefined;
+      payload.description = book.description || undefined;
+    }
+
+    await fetch('http://localhost:3000/api/review', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(payload),
+    });
 
     const newReview = {
       id: Date.now(),
@@ -534,7 +566,7 @@ export default function BookDetail() {
       </div>
 
       {/* Reviews */}
-      <ReviewsSection bookIsbn={bookIsbn} />
+      <ReviewsSection bookIsbn={bookIsbn} bookId={book.id} book={book} />
     </div>
   );
 }
