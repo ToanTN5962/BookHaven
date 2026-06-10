@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, ShoppingCart, ChevronDown, ChevronLeft, ChevronRight, Star, Plus, Globe } from 'lucide-react';
+import { Search, ShoppingCart, ChevronDown, ChevronLeft, ChevronRight, Star, Plus, Globe, User } from 'lucide-react';
 
 // 1. Kho dữ liệu ngôn ngữ (Dictionary) cho các phần text tĩnh trên giao diện
 const translations = {
@@ -53,9 +53,13 @@ const Navbar = ({ lang, setLang }) => {
   const navigate = useNavigate();
   const t = translations[lang]; // Lấy bộ từ điển hiện tại
 
+  const stored = localStorage.getItem("user");
+  const user = stored ? JSON.parse(stored) : null;
+
   return (
     <nav className="flex items-center justify-between px-8 py-4 bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm">
-      <div className="flex items-center gap-8">
+
+      <div className="flex items-center gap-6">
         <h1 className="text-2xl font-bold text-indigo-600 tracking-tight cursor-pointer" onClick={() => navigate("/")}>
           BOOKHAVEN
         </h1>
@@ -89,9 +93,22 @@ const Navbar = ({ lang, setLang }) => {
           </span>
         </div>
 
+        {user ? (
+          <button 
+            className="flex items-center gap-2 p-1 pr-3 hover:bg-gray-100 rounded-full transition-all border border-gray-100"
+            onClick={() => navigate("/profile")}
+          >
+            <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600">
+              <User size={20} />
+            </div>
+            <span className="font-semibold text-sm text-gray-700">{user?.fullName || 'Profile'}</span>
+            <ChevronDown size={14} className="text-gray-400" />
+          </button>
+        ) : (
         <button className="px-6 py-2 bg-indigo-600 text-white rounded-full font-semibold hover:bg-indigo-700 transition-colors" onClick={() => navigate("/login")}>
           {t.login}
         </button>
+        )}
       </div>
     </nav>
   );

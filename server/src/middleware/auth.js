@@ -19,8 +19,10 @@ const verifyToken = (req, res, next) => {
         next();
     }
     catch(error){
+        console.warn('JWT verify error:', error && error.message ? error.message : error);
         return res.status(403).json({
-            message: "Invalid token"
+            message: "Invalid token",
+            error: error && error.message ? error.message : undefined
         });
     }
 }

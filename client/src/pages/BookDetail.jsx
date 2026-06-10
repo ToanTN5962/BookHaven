@@ -8,13 +8,82 @@ import {
 } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
-// Constants
+// Từ điển đa ngôn ngữ (Dictionary)
 // ---------------------------------------------------------------------------
-const STATUSES = [
-  { value: 'READING',      label: 'Reading',      icon: <BookOpen size={14} />,    color: 'bg-blue-50 text-blue-600' },
-  { value: 'WISHLIST', label: 'Want to Read', icon: <BookMarked size={14} />,  color: 'bg-amber-50 text-amber-600' },
-  { value: 'READ',    label: 'Completed',    icon: <CheckCircle size={14} />, color: 'bg-emerald-50 text-emerald-600' },
-  { value: 'DROP',      label: 'Dropped',      icon: <XCircle size={14} />,     color: 'bg-red-50 text-red-500' },
+const translations = {
+  en: {
+    back: "Back",
+    loading: "Loading book details…",
+    notFound: "Book not found.",
+    addToShelf: "Add to Shelf",
+    removeFromShelf: "Remove from shelf",
+    report: "Report",
+    published: "Published",
+    pages: "Pages",
+    publisher: "Publisher",
+    language: "Language",
+    aboutBook: "About this book",
+    showLess: "Show less",
+    readMore: "Read more",
+    communityReviews: "Community Reviews",
+    reviewsCount: "reviews",
+    noReviews: "No reviews yet. Be the first!",
+    writeReview: "Write a review…",
+    yourReview: "Your Review",
+    cancel: "Cancel",
+    yourRating: "Your Rating",
+    yourThoughts: "Your Thoughts",
+    placeholderThoughts: "What did you think of this book? Share your thoughts with the community…",
+    postReview: "Post Review",
+    posting: "Posting…",
+    alertRating: "Please select a star rating.",
+    alertThoughts: "Please write your review.",
+    alertShelfError: "Could not update shelf",
+    alertShelfCatch: "Error updating shelf",
+    like: "like",
+    likes: "likes",
+    ratingLabels: ['', 'Poor', 'Fair', 'Good', 'Great', 'Amazing']
+  },
+  vi: {
+    back: "Quay lại",
+    loading: "Đang tải thông tin sách…",
+    notFound: "Không tìm thấy sách.",
+    addToShelf: "Thêm vào kệ",
+    removeFromShelf: "Xóa khỏi kệ",
+    report: "Báo cáo",
+    published: "Xuất bản",
+    pages: "Số trang",
+    publisher: "Nhà xuất bản",
+    language: "Ngôn ngữ",
+    aboutBook: "Giới thiệu nội dung",
+    showLess: "Thu gọn",
+    readMore: "Xem thêm",
+    communityReviews: "Đánh giá từ cộng đồng",
+    reviewsCount: "đánh giá",
+    noReviews: "Chưa có đánh giá nào. Hãy là người đầu tiên!",
+    writeReview: "Viết đánh giá của bạn…",
+    yourReview: "Đánh giá của bạn",
+    cancel: "Hủy",
+    yourRating: "Điểm đánh giá",
+    yourThoughts: "Cảm nghĩ của bạn",
+    placeholderThoughts: "Bạn nghĩ gì về cuốn sách này? Hãy chia sẻ cảm nhận với cộng đồng…",
+    postReview: "Gửi đánh giá",
+    posting: "Đang gửi…",
+    alertRating: "Vui lòng chọn số sao đánh giá.",
+    alertThoughts: "Vui lòng nhập nội dung đánh giá.",
+    alertShelfError: "Không thể cập nhật kệ sách",
+    alertShelfCatch: "Lỗi khi cập nhật kệ sách",
+    like: "lượt thích",
+    likes: "lượt thích",
+    ratingLabels: ['', 'Kém', 'Tạm được', 'Hay', 'Tuyệt vời', 'Quá xuất sắc']
+  }
+};
+
+const getStatuses = (lang) => [
+  { value: 'READING',  label: lang === 'vi' ? 'Đang đọc' : 'Reading',      icon: <BookOpen size={14} />,    color: 'bg-blue-50 text-blue-600' },
+  { value: 'WISHLIST', label: lang === 'vi' ? 'Muốn đọc' : 'Want to Read', icon: <BookMarked size={14} />,  color: 'bg-amber-50 text-amber-600' },
+  { value: 'READ',     label: lang === 'vi' ? 'Đã đọc xong' : 'Completed',  icon: <CheckCircle size={14} />, color: 'bg-emerald-50 text-emerald-600' },
+  { value: 'DROP',     label: lang === 'vi' ? 'Tạm ngưng' : 'Dropped',      icon: <XCircle size={14} />,     color: 'bg-red-50 text-red-500' },
 ];
 
 const MOCK_REVIEWS = [
@@ -95,8 +164,9 @@ const UserAvatar = ({ name }) => {
 // ---------------------------------------------------------------------------
 // Review Card
 // ---------------------------------------------------------------------------
-const ReviewCard = ({ review, onLike }) => {
+const ReviewCard = ({ review, onLike, lang }) => {
   const navigate = useNavigate();
+  const t = translations[lang];
   return (
     <div className="bg-white rounded-2xl border border-gray-100 p-5 hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between mb-3">
@@ -109,7 +179,7 @@ const ReviewCard = ({ review, onLike }) => {
         </div>
         <div className="flex items-center gap-3">
           <StarRating rating={review.rating} size={14} />
-          <button onClick={() => navigate('/complaint')} className="p-1 rounded-md hover:bg-gray-50 text-gray-400" title="Report">
+          <button onClick={() => navigate('/complaint')} className="p-1 rounded-md hover:bg-gray-50 text-gray-400" title={t.report}>
             <Flag size={14} />
           </button>
         </div>
@@ -126,7 +196,7 @@ const ReviewCard = ({ review, onLike }) => {
         }`}
       >
         <ThumbsUp size={13} className={review.liked ? 'fill-indigo-500' : ''} />
-        {review.likes} {review.likes === 1 ? 'like' : 'likes'}
+        {review.likes} {review.likes === 1 ? t.like : t.likes}
       </button>
     </div>
   );
@@ -135,17 +205,16 @@ const ReviewCard = ({ review, onLike }) => {
 // ---------------------------------------------------------------------------
 // Write Review Panel
 // ---------------------------------------------------------------------------
-const WriteReview = ({ onSubmit }) => {
+const WriteReview = ({ onSubmit, lang }) => {
   const [open,    setOpen]    = useState(false);
   const [rating,  setRating]  = useState(0);
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(false);
-
-  const ratingLabels = ['', 'Poor', 'Fair', 'Good', 'Great', 'Amazing'];
+  const t = translations[lang];
 
   const handleSubmit = async () => {
-    if (!rating)         { alert('Please select a star rating.'); return; }
-    if (!content.trim()) { alert('Please write your review.');    return; }
+    if (!rating)         { alert(t.alertRating); return; }
+    if (!content.trim()) { alert(t.alertThoughts); return; }
     setLoading(true);
     await onSubmit({ rating, content });
     setRating(0);
@@ -162,36 +231,36 @@ const WriteReview = ({ onSubmit }) => {
           className="w-full flex items-center gap-3 p-4 bg-white border-2 border-dashed border-gray-200 rounded-2xl text-gray-400 hover:border-indigo-300 hover:text-indigo-500 hover:bg-indigo-50/30 transition-all font-medium text-sm"
         >
           <MessageSquare size={18} />
-          Write a review…
+          {t.writeReview}
         </button>
       ) : (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-5">
           <div className="flex items-center justify-between">
-            <h3 className="font-black text-gray-800">Your Review</h3>
+            <h3 className="font-black text-gray-800">{t.yourReview}</h3>
             <button onClick={() => setOpen(false)} className="text-xs text-gray-400 hover:text-gray-600">
-              Cancel
+              {t.cancel}
             </button>
           </div>
 
           {/* Star rating */}
           <div>
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Your Rating</p>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">{t.yourRating}</p>
             <div className="flex items-center gap-4">
               <InteractiveStars value={rating} onChange={setRating} />
               {rating > 0 && (
-                <span className="text-sm font-bold text-indigo-600">{ratingLabels[rating]}</span>
+                <span className="text-sm font-bold text-indigo-600">{t.ratingLabels[rating]}</span>
               )}
             </div>
           </div>
 
           {/* Textarea */}
           <div>
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Your Thoughts</p>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">{t.yourThoughts}</p>
             <textarea
               value={content}
               onChange={e => setContent(e.target.value)}
               maxLength={1000}
-              placeholder="What did you think of this book? Share your thoughts with the community…"
+              placeholder={t.placeholderThoughts}
               rows={4}
               className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl text-sm text-gray-700 leading-relaxed outline-none focus:ring-2 focus:ring-indigo-300 focus:bg-white transition-all resize-none"
             />
@@ -204,7 +273,7 @@ const WriteReview = ({ onSubmit }) => {
             className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all disabled:opacity-40 disabled:cursor-not-allowed text-sm"
           >
             <Send size={15} />
-            {loading ? 'Posting…' : 'Post Review'}
+            {loading ? t.posting : t.postReview}
           </button>
         </div>
       )}
@@ -215,8 +284,9 @@ const WriteReview = ({ onSubmit }) => {
 // ---------------------------------------------------------------------------
 // Reviews Section
 // ---------------------------------------------------------------------------
-const ReviewsSection = ({ bookIsbn, bookId, book }) => {
+const ReviewsSection = ({ bookIsbn, bookId, book, lang }) => {
   const [reviews, setReviews] = useState(MOCK_REVIEWS);
+  const t = translations[lang];
 
   const handleLike = (reviewId) => {
     setReviews(prev => prev.map(r =>
@@ -236,12 +306,10 @@ const ReviewsSection = ({ bookIsbn, bookId, book }) => {
 
     if (bookId && typeof bookId === 'number') payload.bookId = bookId;
 
-    // include book metadata so backend can upsert the Book when creating review
     if (book) {
       payload.title = book.title || book.name || undefined;
       payload.author = book.author || (book.authors ? book.authors.join(', ') : undefined);
       payload.publisher = book.publisher || undefined;
-      // normalize published year: prefer explicit publishedYear, else parse year from publishedDate
       let py = undefined;
       if (book.publishedYear) {
         const n = Number(book.publishedYear);
@@ -253,7 +321,6 @@ const ReviewsSection = ({ bookIsbn, bookId, book }) => {
       }
       if (py !== undefined) {
         payload.publishedYear = py;
-        // also include raw under backup key consumed by backend
         payload.publishedYearFromClient = py;
       }
       payload.imageUrl = book.thumbnail || book.imageUrl || undefined;
@@ -269,12 +336,12 @@ const ReviewsSection = ({ bookIsbn, bookId, book }) => {
 
     const newReview = {
       id: Date.now(),
-      user: { name: 'You' },
+      user: { name: lang === 'vi' ? 'Bạn' : 'You' },
       rating,
       content,
       likes: 0,
       liked: false,
-      createdAt: 'Just now',
+      createdAt: lang === 'vi' ? 'Vừa xong' : 'Just now',
     };
     setReviews(prev => [newReview, ...prev]);
   };
@@ -287,28 +354,28 @@ const ReviewsSection = ({ bookIsbn, bookId, book }) => {
     <div className="max-w-5xl mx-auto px-6 py-10">
       <div className="flex items-end justify-between mb-8">
         <div>
-          <h2 className="text-2xl font-black text-gray-900">Community Reviews</h2>
+          <h2 className="text-2xl font-black text-gray-900"> {t.communityReviews}</h2>
           {avg && (
             <div className="flex items-center gap-2 mt-1">
               <StarRating rating={parseFloat(avg)} size={15} />
               <span className="text-sm font-bold text-gray-700">{avg}</span>
-              <span className="text-sm text-gray-400">· {reviews.length} reviews</span>
+              <span className="text-sm text-gray-400">· {reviews.length} {t.reviewsCount}</span>
             </div>
           )}
         </div>
       </div>
 
-      <WriteReview onSubmit={handleSubmitReview} />
+      <WriteReview onSubmit={handleSubmitReview} lang={lang} />
 
       {reviews.length === 0 ? (
         <div className="text-center py-16 text-gray-400">
           <MessageSquare size={40} className="mx-auto mb-3 opacity-30" />
-          <p className="font-medium">No reviews yet. Be the first!</p>
+          <p className="font-medium">{t.noReviews}</p>
         </div>
       ) : (
         <div className="space-y-4">
           {reviews.map(review => (
-            <ReviewCard key={review.id} review={review} onLike={handleLike} />
+            <ReviewCard key={review.id} review={review} onLike={handleLike} lang={lang} />
           ))}
         </div>
       )}
@@ -328,6 +395,15 @@ export default function BookDetail() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [wished,       setWished]       = useState(false);
   const [descExpanded, setDescExpanded] = useState(false);
+
+  // Đồng bộ hóa State ngôn ngữ hệ thống qua Local Storage
+  const [lang, setLang] = useState(() => localStorage.getItem('app_lang') || 'en');
+  const t = translations[lang];
+  const STATUSES = getStatuses(lang);
+
+  useEffect(() => {
+    localStorage.setItem('app_lang', lang);
+  }, [lang]);
 
   const handleSetStatus = async (value) => {
     const token = localStorage.getItem('token');
@@ -360,7 +436,7 @@ export default function BookDetail() {
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         console.error('Failed to update shelf', err);
-        alert('Could not update shelf');
+        alert(t.alertShelfError);
         return;
       }
 
@@ -368,7 +444,7 @@ export default function BookDetail() {
       setShowDropdown(false);
     } catch (err) {
       console.error('Error updating shelf:', err);
-      alert('Error updating shelf');
+      alert(t.alertShelfCatch);
     }
   };
 
@@ -392,14 +468,14 @@ export default function BookDetail() {
     <div className="min-h-screen bg-[#fafafa] flex items-center justify-center">
       <div className="flex flex-col items-center gap-4 text-gray-400">
         <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
-        <span className="text-sm font-medium">Loading book details…</span>
+        <span className="text-sm font-medium">{t.loading}</span>
       </div>
     </div>
   );
 
   if (!book) return (
     <div className="min-h-screen bg-[#fafafa] flex items-center justify-center text-gray-400">
-      Book not found.
+      {t.notFound}
     </div>
   );
 
@@ -416,7 +492,7 @@ export default function BookDetail() {
           onClick={() => navigate(-1)}
           className="flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-indigo-600 transition-colors"
         >
-          <ArrowLeft size={18} /> Back
+          <ArrowLeft size={18} /> {t.back}
         </button>
         <h1
           className="text-xl font-black text-indigo-600 tracking-tight cursor-pointer"
@@ -424,12 +500,30 @@ export default function BookDetail() {
         >
           BOOKHAVEN
         </h1>
-        <button
-          onClick={() => navigator.share?.({ title: book.title, url: window.location.href })}
-          className="p-2 rounded-full hover:bg-gray-100 text-gray-500 transition-colors"
-        >
-          <Share2 size={18} />
-        </button>
+        <div className="flex items-center gap-4">
+          {/* NÚT GẠT ĐỔI NGÔN NGỮ (TOGGLE SWITCH) */}
+          <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl border border-gray-200">
+            <button 
+              onClick={() => setLang('en')}
+              className={`text-[10px] font-black px-2.5 py-1 rounded-lg transition-all ${lang === 'en' ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}
+            >
+              EN
+            </button>
+            <button 
+              onClick={() => setLang('vi')}
+              className={`text-[10px] font-black px-2.5 py-1 rounded-lg transition-all ${lang === 'vi' ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}
+            >
+              VI
+            </button>
+          </div>
+
+          <button
+            onClick={() => navigator.share?.({ title: book.title, url: window.location.href })}
+            className="p-2 rounded-full hover:bg-gray-100 text-gray-500 transition-colors"
+          >
+            <Share2 size={18} />
+          </button>
+        </div>
       </nav>
 
       {/* Hero */}
@@ -459,7 +553,7 @@ export default function BookDetail() {
                   }`}
                 >
                   {status ? currentStatus.icon : <BookMarked size={14} />}
-                  {status ? currentStatus.label : 'Add to Shelf'}
+                  {status ? currentStatus.label : t.addToShelf}
                   <ChevronDown size={14} />
                 </button>
 
@@ -482,7 +576,7 @@ export default function BookDetail() {
                         onClick={() => { setStatus(null); setShowDropdown(false); }}
                         className="w-full px-4 py-3 text-xs text-gray-400 hover:text-red-400 transition-colors border-t border-gray-50"
                       >
-                        Remove from shelf
+                        {t.removeFromShelf}
                       </button>
                     )}
                   </div>
@@ -506,7 +600,7 @@ export default function BookDetail() {
           <div className="flex-1 min-w-0">
             <div className="mb-4">
               <button onClick={() => navigate('/complaint')} className="text-sm text-red-600 bg-red-50 px-2 py-1 rounded-full font-bold inline-flex items-center gap-2 mb-3">
-                <Flag size={14} /> Report
+                <Flag size={14} /> {t.report}
               </button>
               <div className="flex flex-wrap gap-2">
                 {book.tags?.slice(0, 3).map((tag, i) => (
@@ -530,10 +624,10 @@ export default function BookDetail() {
 
             <div className="grid grid-cols-2 gap-4 mb-8">
               {[
-                { icon: <Calendar size={15} />, label: 'Published', value: book.publishedDate },
-                { icon: <Hash size={15} />,     label: 'Pages',     value: book.pageCount },
-                { icon: <Building size={15} />, label: 'Publisher', value: book.publisher },
-                { icon: <Globe size={15} />,    label: 'Language',  value: book.language?.toUpperCase() },
+                { icon: <Calendar size={15} />, label: t.published, value: book.publishedDate },
+                { icon: <Hash size={15} />,     label: t.pages,     value: book.pageCount },
+                { icon: <Building size={15} />, label: t.publisher, value: book.publisher },
+                { icon: <Globe size={15} />,    label: t.language,  value: book.language?.toUpperCase() },
               ].filter(m => m.value).map((meta, i) => (
                 <div key={i} className="flex items-center gap-3 text-sm text-gray-600">
                   <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400">
@@ -548,7 +642,7 @@ export default function BookDetail() {
             </div>
 
             <div>
-              <h3 className="text-sm font-black text-gray-800 uppercase tracking-wider mb-3">About this book</h3>
+              <h3 className="text-sm font-black text-gray-800 uppercase tracking-wider mb-3">{t.aboutBook}</h3>
               <p className="text-gray-600 text-sm leading-relaxed">
                 {descExpanded ? desc : shortDesc}
               </p>
@@ -557,7 +651,7 @@ export default function BookDetail() {
                   onClick={() => setDescExpanded(v => !v)}
                   className="mt-2 text-sm font-bold text-indigo-500 hover:text-indigo-700 transition-colors"
                 >
-                  {descExpanded ? 'Show less' : 'Read more'}
+                  {descExpanded ? t.showLess : t.readMore}
                 </button>
               )}
             </div>
@@ -566,7 +660,7 @@ export default function BookDetail() {
       </div>
 
       {/* Reviews */}
-      <ReviewsSection bookIsbn={bookIsbn} bookId={book.id} book={book} />
+      <ReviewsSection bookIsbn={bookIsbn} bookId={book.id} book={book} lang={lang} />
     </div>
   );
 }

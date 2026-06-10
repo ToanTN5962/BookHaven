@@ -9,45 +9,97 @@ import {
 } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
-// Mock data
+// Từ điển đa ngôn ngữ (Dictionary)
 // ---------------------------------------------------------------------------
-const MOCK_STATS = {
-  totalBooks: 1284,
-  totalUsers: 5621,
-  pendingComplaints: 14,
-  avgRating: 4.2,
+const translations = {
+  en: {
+    adminConsole: "Admin Console",
+    overview: "Overview",
+    books: "Books",
+    complaints: "Complaints",
+    users: "Users",
+    settings: "Settings",
+    logout: "Log out",
+    searchPlaceholder: "Search books…",
+    addBook: "Add Book",
+    addNewBook: "Add New Book",
+    title: "Title",
+    author: "Author",
+    genre: "Genre",
+    publisher: "Publisher",
+    year: "Year",
+    language: "Language",
+    description: "Description",
+    cancel: "Cancel",
+    totalBooks: "Total Books",
+    registeredUsers: "Registered Users",
+    pendingComplaints: "Pending Complaints",
+    requiresAttention: "Requires attention",
+    averageRating: "Average Rating",
+    recentComplaints: "Recent Complaints",
+    recentBooks: "Recent Books",
+    newUsers: "New Users",
+    viewAll: "View all",
+    allBooks: "All Books",
+    noBooks: "No books found.",
+    all: "All",
+    noComplaints: "No complaints found.",
+    resolve: "Resolve",
+    reject: "Reject",
+    fullManagement: "Full Management",
+    view: "View",
+    edit: "Edit",
+    delete: "Delete"
+  },
+  vi: {
+    adminConsole: "Bảng điều khiển Admin",
+    overview: "Tổng quan",
+    books: "Sách",
+    complaints: "Khiếu nại",
+    users: "Người dùng",
+    settings: "Cài đặt",
+    logout: "Đăng xuất",
+    searchPlaceholder: "Tìm kiếm sách…",
+    addBook: "Thêm sách",
+    addNewBook: "Thêm sách mới",
+    title: "Tiêu đề",
+    author: "Tác giả",
+    genre: "Thể loại",
+    publisher: "Nhà xuất bản",
+    year: "Năm xuất bản",
+    language: "Ngôn ngữ",
+    description: "Mô tả",
+    cancel: "Hủy",
+    totalBooks: "Tổng số sách",
+    registeredUsers: "Người dùng đăng ký",
+    pendingComplaints: "Khiếu nại chưa xử lý",
+    requiresAttention: "Cần chú ý",
+    averageRating: "Đánh giá trung bình",
+    recentComplaints: "Khiếu nại gần đây",
+    recentBooks: "Sách mới thêm gần đây",
+    newUsers: "Thành viên mới",
+    viewAll: "Xem tất cả",
+    allBooks: "Tất cả sách",
+    noBooks: "Không tìm thấy cuốn sách nào.",
+    all: "Tất cả",
+    noComplaints: "Không có khiếu nại nào.",
+    resolve: "Giải quyết",
+    reject: "Từ chối",
+    fullManagement: "Quản lý toàn diện",
+    view: "Xem",
+    edit: "Sửa",
+    delete: "Xóa"
+  }
 };
-
-const MOCK_RECENT_BOOKS = [
-  { id: 1, title: 'The Midnight Library', author: 'Matt Haig',       genre: 'Fiction',   year: 2020, rating: 4.5 },
-  { id: 2, title: 'Atomic Habits',        author: 'James Clear',     genre: 'Self-Help', year: 2018, rating: 4.8 },
-  { id: 3, title: 'Dune',                 author: 'Frank Herbert',   genre: 'Sci-Fi',    year: 1965, rating: 4.7 },
-  { id: 4, title: 'The Alchemist',        author: 'Paulo Coelho',    genre: 'Fiction',   year: 1988, rating: 4.3 },
-  { id: 5, title: 'Sapiens',              author: 'Yuval N. Harari', genre: 'History',   year: 2011, rating: 4.6 },
-];
-
-const MOCK_COMPLAINTS = [
-  { id: 1, user: 'alice@mail.com', type: 'WRONG_INFO',           description: 'Author name is incorrect on book #24', status: 'SOLVING',  createdAt: '2h ago' },
-  { id: 2, user: 'bob@mail.com',   type: 'INAPPROPRIATE_REVIEW', description: 'Review contains offensive language',    status: 'SOLVING',  createdAt: '5h ago' },
-  { id: 3, user: 'carol@mail.com', type: 'DUPLICATE_BOOK',       description: 'Book appears twice in catalog',         status: 'SOLVING',  createdAt: '1d ago' },
-  { id: 4, user: 'dan@mail.com',   type: 'COPYRIGHT_VIOLATION',  description: 'Unauthorized copy of protected text',   status: 'SOLVED',   createdAt: '2d ago' },
-  { id: 5, user: 'eve@mail.com',   type: 'TECHNICAL_ISSUE',      description: 'Cover image not loading on mobile',     status: 'REJECTED', createdAt: '3d ago' },
-];
-
-const MOCK_RECENT_USERS = [
-  { id: 1, fullName: 'Nguyen Van A', email: 'vana@mail.com',  role: 'USER',  createdAt: '1h ago' },
-  { id: 2, fullName: 'Tran Thi B',   email: 'thib@mail.com',  role: 'USER',  createdAt: '3h ago' },
-  { id: 3, fullName: 'Le Minh C',    email: 'minhc@mail.com', role: 'ADMIN', createdAt: '1d ago' },
-];
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-const STATUS_CONFIG = {
-  SOLVING:  { label: 'Solving',  color: 'bg-amber-50 text-amber-600 border border-amber-200',     icon: <Clock size={11} /> },
-  SOLVED:   { label: 'Solved',   color: 'bg-emerald-50 text-emerald-600 border border-emerald-200', icon: <CheckCircle size={11} /> },
-  REJECTED: { label: 'Rejected', color: 'bg-red-50 text-red-500 border border-red-200',           icon: <XCircle size={11} /> },
-};
+const getStatusConfig = (t) => ({
+  SOLVING:  { label: t === 'vi' ? 'Đang xử lý' : 'Solving',  color: 'bg-amber-50 text-amber-600 border border-amber-200',     icon: <Clock size={11} /> },
+  SOLVED:   { label: t === 'vi' ? 'Đã giải quyết' : 'Solved',   color: 'bg-emerald-50 text-emerald-600 border border-emerald-200', icon: <CheckCircle size={11} /> },
+  REJECTED: { label: t === 'vi' ? 'Đã từ chối' : 'Rejected', color: 'bg-red-50 text-red-500 border border-red-200',           icon: <XCircle size={11} /> },
+});
 
 const TYPE_LABEL = {
   WRONG_INFO:           'Wrong Info',
@@ -87,25 +139,26 @@ const StatCard = ({ icon, label, value, sub, iconBg, iconColor, onClick }) => (
 // ---------------------------------------------------------------------------
 // Add Book Modal
 // ---------------------------------------------------------------------------
-const AddBookModal = ({ onClose, onSave }) => {
+const AddBookModal = ({ onClose, onSave, lang }) => {
   const [form, setForm] = useState({ title: '', author: '', genre: '', year: '', publisher: '', language: 'en', description: '' });
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const t = translations[lang];
 
   return (
     <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto border border-gray-200">
         <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="text-lg font-black text-gray-900">Add New Book</h2>
+          <h2 className="text-lg font-black text-gray-900">{t.addNewBook}</h2>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-xl text-gray-400 transition-colors"><XCircle size={20} /></button>
         </div>
         <div className="p-6 space-y-4">
           {[
-            { label: 'Title',     key: 'title',     placeholder: 'Book title' },
-            { label: 'Author',    key: 'author',    placeholder: 'Author name' },
-            { label: 'Genre',     key: 'genre',     placeholder: 'e.g. Fiction, Sci-Fi' },
-            { label: 'Publisher', key: 'publisher', placeholder: 'Publisher name' },
-            { label: 'Year',      key: 'year',      placeholder: 'Published year' },
-            { label: 'Language',  key: 'language',  placeholder: 'e.g. en, vi' },
+            { label: t.title,     key: 'title',     placeholder: 'Book title' },
+            { label: t.author,    key: 'author',    placeholder: 'Author name' },
+            { label: t.genre,     key: 'genre',     placeholder: 'e.g. Fiction, Sci-Fi' },
+            { label: t.publisher, key: 'publisher', placeholder: 'Publisher name' },
+            { label: t.year,      key: 'year',      placeholder: 'Published year' },
+            { label: t.language,  key: 'language',  placeholder: 'e.g. en, vi' },
           ].map(f => (
             <div key={f.key}>
               <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1.5">{f.label}</label>
@@ -118,7 +171,7 @@ const AddBookModal = ({ onClose, onSave }) => {
             </div>
           ))}
           <div>
-            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1.5">Description</label>
+            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1.5">{t.description}</label>
             <textarea
               value={form.description}
               onChange={e => set('description', e.target.value)}
@@ -129,12 +182,12 @@ const AddBookModal = ({ onClose, onSave }) => {
           </div>
         </div>
         <div className="p-6 border-t border-gray-100 flex gap-3">
-          <button onClick={onClose} className="flex-1 py-2.5 bg-gray-100 text-gray-600 font-bold rounded-xl hover:bg-gray-200 transition-colors text-sm">Cancel</button>
+          <button onClick={onClose} className="flex-1 py-2.5 bg-gray-100 text-gray-600 font-bold rounded-xl hover:bg-gray-200 transition-colors text-sm">{t.cancel}</button>
           <button
             onClick={() => { onSave(form); onClose(); }}
             className="flex-[2] py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors text-sm flex items-center justify-center gap-2"
           >
-            <Plus size={15} /> Add Book
+            <Plus size={15} /> {t.addBook}
           </button>
         </div>
       </div>
@@ -154,6 +207,15 @@ export default function AdminDashboard() {
   const [activeTab,   setActiveTab]   = useState('overview');
   const [stats,       setStats]       = useState({ totalBooks: 0, totalUsers: 0, pendingComplaints: 0, avgRating: 0 });
   const [filterStatus, setFilterStatus] = useState('All');
+
+  // Đồng bộ hóa State ngôn ngữ thông qua Local Storage
+  const [lang, setLang] = useState(() => localStorage.getItem('app_lang') || 'en');
+  const t = translations[lang];
+  const statusConfig = getStatusConfig(lang);
+
+  useEffect(() => {
+    localStorage.setItem('app_lang', lang);
+  }, [lang]);
 
   const filteredBooks = books.filter(b =>
     b.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -195,7 +257,6 @@ export default function AdminDashboard() {
         const res = await fetch('http://localhost:3000/api/admin/statinfo', { signal: ac.signal });
         if (!res.ok) return;
         const data = await res.json();
-        // map backend `solvingStatus` -> `status` expected by UI
         const complaintsFromServer = (data.complaints || []).map(c => ({ ...c, status: c.solvingStatus || c.status }));
         setComplaints(complaintsFromServer);
         setStats(s => ({
@@ -205,7 +266,7 @@ export default function AdminDashboard() {
           avgRating: s.avgRating,
         }));
       } catch (e) {
-        // ignore for now
+        // ignore
       }
     };
 
@@ -241,16 +302,23 @@ export default function AdminDashboard() {
   }, []);
 
   const TABS = [
-    { id: 'overview',   label: 'Overview',   icon: <BarChart3 size={16} /> },
-    { id: 'books',      label: 'Books',      icon: <BookMarked size={16} /> },
-    { id: 'complaints', label: 'Complaints', icon: <AlertTriangle size={16} />, badge: pendingCount },
-    { id: 'users',      label: 'Users',      icon: <Users size={16} /> },
+    { id: 'overview',   label: t.overview,   icon: <BarChart3 size={16} /> },
+    { id: 'books',      label: t.books,      icon: <BookMarked size={16} /> },
+    { id: 'complaints', label: t.complaints, icon: <AlertTriangle size={16} />, badge: pendingCount },
+    { id: 'users',      label: t.users,      icon: <Users size={16} /> },
+  ];
+
+  // Mock dữ liệu người dùng mới mẫu (ở bài toán thực tế sẽ fetch từ API)
+  const MOCK_RECENT_USERS = [
+    { id: 1, fullName: 'Nguyen Van A', email: 'vana@mail.com',  role: 'USER',  createdAt: '1h ago' },
+    { id: 2, fullName: 'Tran Thi B',   email: 'thib@mail.com',  role: 'USER',  createdAt: '3h ago' },
+    { id: 3, fullName: 'Le Minh C',    email: 'minhc@mail.com', role: 'ADMIN', createdAt: '1d ago' },
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 font-sans">
+    <div className="min-h-screen bg-gray-50 font-sans text-gray-900">
 
-      {showAddBook && <AddBookModal onClose={() => setShowAddBook(false)} onSave={handleAddBook} />}
+      {showAddBook && <AddBookModal onClose={() => setShowAddBook(false)} onSave={handleAddBook} lang={lang} />}
 
       {/* ── Sidebar ── */}
       <aside className="fixed left-0 top-0 h-full w-60 bg-white border-r border-gray-200 flex flex-col z-40 shadow-sm">
@@ -258,7 +326,7 @@ export default function AdminDashboard() {
           <h1 className="text-lg font-black text-gray-900 tracking-tight">
             BOOK<span className="text-indigo-600">HAVEN</span>
           </h1>
-          <p className="text-xs text-gray-400 mt-0.5 font-medium">Admin Console</p>
+          <p className="text-xs text-gray-400 mt-0.5 font-medium">{t.adminConsole}</p>
         </div>
 
         <nav className="flex-1 p-4 space-y-1">
@@ -289,35 +357,54 @@ export default function AdminDashboard() {
             onClick={() => navigate('/admin/settings')}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition-all"
           >
-            <ShieldCheck size={16} /> Settings
+            <ShieldCheck size={16} /> {t.settings}
           </button>
           <button
             onClick={() => navigate('/login')}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-gray-500 hover:bg-red-50 hover:text-red-500 transition-all"
           >
-            <LogOut size={16} /> Log out
+            <LogOut size={16} /> {t.logout}
           </button>
         </div>
       </aside>
 
-      {/* ── Main ── */}
+      {/* ── Main Content ── */}
       <main className="ml-60 min-h-screen">
 
-        {/* Top bar */}
+        {/* Top bar với bộ chuyển đổi ngôn ngữ */}
         <header className="sticky top-0 z-30 bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-between shadow-sm">
           <div>
-            <h2 className="text-lg font-black text-gray-900 capitalize">{activeTab}</h2>
+            <h2 className="text-lg font-black text-gray-900 capitalize">
+              {TABS.find(x => x.id === activeTab)?.label || activeTab}
+            </h2>
             <p className="text-xs text-gray-400">
-              {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+              {new Date().toLocaleDateString(lang === 'vi' ? 'vi-VN' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
             </p>
           </div>
           <div className="flex items-center gap-3">
+            
+            {/* NÚT GẠT ĐỔI NGÔN NGỮ (TOGGLE SWITCH) */}
+            <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl border border-gray-200 mr-2">
+              <button 
+                onClick={() => setLang('en')}
+                className={`text-xs font-black px-2.5 py-1 rounded-lg transition-all ${lang === 'en' ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}
+              >
+                EN
+              </button>
+              <button 
+                onClick={() => setLang('vi')}
+                className={`text-xs font-black px-2.5 py-1 rounded-lg transition-all ${lang === 'vi' ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}
+              >
+                VI
+              </button>
+            </div>
+
             <div className="relative">
               <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                placeholder="Search books…"
+                placeholder={t.searchPlaceholder}
                 className="pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 placeholder-gray-400 outline-none focus:ring-2 focus:ring-indigo-300 focus:bg-white w-56 transition-all"
               />
             </div>
@@ -325,7 +412,7 @@ export default function AdminDashboard() {
               onClick={() => setShowAddBook(true)}
               className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-colors shadow-md shadow-indigo-200"
             >
-              <Plus size={15} /> Add Book
+              <Plus size={15} /> {t.addBook}
             </button>
             <button className="relative p-2 bg-gray-50 border border-gray-200 rounded-xl text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors">
               <Bell size={18} />
@@ -343,25 +430,22 @@ export default function AdminDashboard() {
           {/* ── OVERVIEW TAB ── */}
           {activeTab === 'overview' && (
             <div className="space-y-6">
-              {/* Stat cards */}
               <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-                <StatCard icon={<BookOpen size={20} />}      label="Total Books"         value={stats.totalBooks}          iconBg="bg-indigo-50"  iconColor="text-indigo-600" onClick={() => setActiveTab('books')} />
-                <StatCard icon={<Users size={20} />}         label="Registered Users"    value={stats.totalUsers}          iconBg="bg-violet-50"  iconColor="text-violet-600" onClick={() => setActiveTab('users')} />
-                <StatCard icon={<AlertTriangle size={20} />} label="Pending Complaints"  value={stats.pendingComplaints}   iconBg="bg-rose-50"    iconColor="text-rose-500"   onClick={() => setActiveTab('complaints')} sub="Requires attention" />
-                <StatCard icon={<Star size={20} />}          label="Average Rating"      value={`${stats.avgRating} / 5`} iconBg="bg-amber-50"   iconColor="text-amber-500"  onClick={() => {}} />
+                <StatCard icon={<BookOpen size={20} />}      label={t.totalBooks}         value={stats.totalBooks}          iconBg="bg-indigo-50"  iconColor="text-indigo-600" onClick={() => setActiveTab('books')} />
+                <StatCard icon={<Users size={20} />}         label={t.registeredUsers}    value={stats.totalUsers}          iconBg="bg-violet-50"  iconColor="text-violet-600" onClick={() => setActiveTab('users')} />
+                <StatCard icon={<AlertTriangle size={20} />} label={t.pendingComplaints}   value={stats.pendingComplaints}   iconBg="bg-rose-50"    iconColor="text-rose-500"   onClick={() => setActiveTab('complaints')} sub={t.requiresAttention} />
+                <StatCard icon={<Star size={20} />}          label={t.averageRating}      value={`${stats.avgRating} / 5`} iconBg="bg-amber-50"   iconColor="text-amber-500"  onClick={() => {}} />
               </div>
 
-              {/* Two-column */}
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-
                 {/* Recent complaints */}
                 <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
                   <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
                     <h3 className="font-black text-gray-900 flex items-center gap-2">
-                      <AlertTriangle size={15} className="text-rose-400" /> Recent Complaints
+                      <AlertTriangle size={15} className="text-rose-400" /> {t.recentComplaints}
                     </h3>
                     <button onClick={() => { setFilterStatus('All'); setActiveTab('complaints'); }} className="text-xs font-bold text-indigo-500 hover:text-indigo-700 flex items-center gap-1">
-                      View all <ChevronRight size={13} />
+                      {t.viewAll} <ChevronRight size={13} />
                     </button>
                   </div>
                   <div className="divide-y divide-gray-50">
@@ -371,8 +455,8 @@ export default function AdminDashboard() {
                           <span className="text-[10px] font-black uppercase tracking-wider bg-gray-100 text-gray-500 px-2 py-0.5 rounded">
                             {TYPE_LABEL[c.type]}
                           </span>
-                          <span className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded ${STATUS_CONFIG[c.status].color}`}>
-                            {STATUS_CONFIG[c.status].icon} {STATUS_CONFIG[c.status].label}
+                          <span className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded ${statusConfig[c.status].color}`}>
+                            {statusConfig[c.status].icon} {statusConfig[c.status].label}
                           </span>
                         </div>
                         <p className="text-sm text-gray-700 font-medium truncate">{c.description}</p>
@@ -386,10 +470,10 @@ export default function AdminDashboard() {
                 <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
                   <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
                     <h3 className="font-black text-gray-900 flex items-center gap-2">
-                      <BookOpen size={15} className="text-indigo-500" /> Recent Books
+                      <BookOpen size={15} className="text-indigo-500" /> {t.recentBooks}
                     </h3>
                     <button onClick={() => setActiveTab('books')} className="text-xs font-bold text-indigo-500 hover:text-indigo-700 flex items-center gap-1">
-                      View all <ChevronRight size={13} />
+                      {t.viewAll} <ChevronRight size={13} />
                     </button>
                   </div>
                   <div className="divide-y divide-gray-50">
@@ -415,10 +499,10 @@ export default function AdminDashboard() {
               <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
                   <h3 className="font-black text-gray-900 flex items-center gap-2">
-                    <Users size={15} className="text-violet-500" /> New Users
+                    <Users size={15} className="text-violet-500" /> {t.newUsers}
                   </h3>
                   <button onClick={() => setActiveTab('users')} className="text-xs font-bold text-indigo-500 hover:text-indigo-700 flex items-center gap-1">
-                    View all <ChevronRight size={13} />
+                    {t.viewAll} <ChevronRight size={13} />
                   </button>
                 </div>
                 <div className="divide-y divide-gray-50">
@@ -449,20 +533,20 @@ export default function AdminDashboard() {
             <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
               <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
                 <h3 className="font-black text-gray-900">
-                  All Books <span className="text-gray-400 font-normal text-sm">({filteredBooks.length})</span>
+                  {t.allBooks} <span className="text-gray-400 font-normal text-sm">({filteredBooks.length})</span>
                 </h3>
                 <button
                   onClick={() => setShowAddBook(true)}
                   className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-xl hover:bg-indigo-700 transition-colors"
                 >
-                  <Plus size={13} /> Add Book
+                  <Plus size={13} /> {t.addBook}
                 </button>
               </div>
               <div className="divide-y divide-gray-50">
                 {filteredBooks.length === 0 ? (
                   <div className="py-16 text-center text-gray-400">
                     <BookOpen size={40} className="mx-auto mb-3 opacity-30" />
-                    <p className="text-sm">No books found.</p>
+                    <p className="text-sm">{t.noBooks}</p>
                   </div>
                 ) : filteredBooks.map(b => (
                   <div key={b.id} className="flex items-center gap-4 px-6 py-4 hover:bg-gray-50 transition-colors group">
@@ -477,9 +561,9 @@ export default function AdminDashboard() {
                       <Star size={12} className="fill-amber-400" /> {b.rating}
                     </div>
                     <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => navigate(`/books/${b.id}`)}            title="View"   className="p-1.5 bg-gray-100 text-gray-500 hover:bg-indigo-100 hover:text-indigo-600 rounded-lg transition-colors"><Eye size={14} /></button>
-                      <button onClick={() => navigate(`/admin/books/${b.id}/edit`)} title="Edit"   className="p-1.5 bg-gray-100 text-gray-500 hover:bg-amber-100 hover:text-amber-600 rounded-lg transition-colors"><Edit3 size={14} /></button>
-                      <button onClick={() => setBooks(prev => prev.filter(x => x.id !== b.id))} title="Delete" className="p-1.5 bg-gray-100 text-gray-500 hover:bg-red-100 hover:text-red-500 rounded-lg transition-colors"><Trash2 size={14} /></button>
+                      <button onClick={() => navigate(`/books/${b.id}`)}            title={t.view}   className="p-1.5 bg-gray-100 text-gray-500 hover:bg-indigo-100 hover:text-indigo-600 rounded-lg transition-colors"><Eye size={14} /></button>
+                      <button onClick={() => navigate(`/admin/books/${b.id}/edit`)} title={t.edit}   className="p-1.5 bg-gray-100 text-gray-500 hover:bg-amber-100 hover:text-amber-600 rounded-lg transition-colors"><Edit3 size={14} /></button>
+                      <button onClick={() => setBooks(prev => prev.filter(x => x.id !== b.id))} title={t.delete} className="p-1.5 bg-gray-100 text-gray-500 hover:bg-red-100 hover:text-red-500 rounded-lg transition-colors"><Trash2 size={14} /></button>
                     </div>
                   </div>
                 ))}
@@ -490,24 +574,24 @@ export default function AdminDashboard() {
           {/* ── COMPLAINTS TAB ── */}
           {activeTab === 'complaints' && (
             <div className="space-y-4">
-              {/* Counts summary */}
               <div className="grid grid-cols-3 gap-4">
                 {['SOLVING', 'SOLVED', 'REJECTED'].map(k => (
                   <div key={k} className="bg-white rounded-xl border border-gray-100 p-4 flex items-center justify-between">
                     <div>
-                      <p className="text-xs text-gray-500 font-bold">{STATUS_CONFIG[k].label}</p>
+                      <p className="text-xs text-gray-500 font-bold">{statusConfig[k].label}</p>
                       <p className="text-2xl font-black text-gray-900">{complaintCounts[k]}</p>
                     </div>
                     <div className="ml-4">
-                      <span className={`${STATUS_CONFIG[k].color} px-3 py-1 rounded-full text-xs font-black`}>{STATUS_CONFIG[k].icon}</span>
+                      <span className={`${statusConfig[k].color} px-3 py-1 rounded-full text-xs font-black`}>{statusConfig[k].icon}</span>
                     </div>
                   </div>
                 ))}
               </div>
-              {/* Filter pills */}
+
               <div className="flex gap-2">
                 {['All', 'SOLVING', 'SOLVED', 'REJECTED'].map(f => {
                   const count = f === 'All' ? complaints.length : complaints.filter(c => c.status === f).length;
+                  const labelDisplay = f === 'All' ? t.all : statusConfig[f]?.label || f;
                   return (
                     <button
                       key={f}
@@ -518,7 +602,7 @@ export default function AdminDashboard() {
                           : 'bg-white text-gray-500 border-gray-200 hover:border-indigo-300 hover:text-indigo-500'
                       }`}
                     >
-                      {f} <span className={`ml-1 ${filterStatus === f ? 'text-white/70' : 'text-gray-400'}`}>({count})</span>
+                      {labelDisplay} <span className={`ml-1 ${filterStatus === f ? 'text-white/70' : 'text-gray-400'}`}>({count})</span>
                     </button>
                   );
                 })}
@@ -528,7 +612,7 @@ export default function AdminDashboard() {
                 {filteredComplaints.length === 0 ? (
                   <div className="py-16 text-center text-gray-400">
                     <AlertTriangle size={40} className="mx-auto mb-3 opacity-20" />
-                    <p className="text-sm">No complaints found.</p>
+                    <p className="text-sm">{t.noComplaints}</p>
                   </div>
                 ) : filteredComplaints.map(c => (
                   <div key={c.id} className="flex items-start gap-4 px-6 py-5 hover:bg-gray-50 transition-colors">
@@ -540,8 +624,8 @@ export default function AdminDashboard() {
                         <span className="text-[10px] font-black uppercase tracking-wider bg-gray-100 text-gray-500 px-2 py-0.5 rounded">
                           {TYPE_LABEL[c.type]}
                         </span>
-                        <span className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded ${STATUS_CONFIG[c.status].color}`}>
-                          {STATUS_CONFIG[c.status].icon} {STATUS_CONFIG[c.status].label}
+                        <span className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded ${statusConfig[c.status].color}`}>
+                          {statusConfig[c.status].icon} {statusConfig[c.status].label}
                         </span>
                       </div>
                       <p className="text-sm text-gray-700 font-medium">{c.description}</p>
@@ -553,13 +637,13 @@ export default function AdminDashboard() {
                           onClick={() => handleResolve(c.id)}
                           className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-600 text-xs font-bold rounded-lg hover:bg-emerald-600 hover:text-white transition-colors border border-emerald-200"
                         >
-                          <CheckCircle size={13} /> Resolve
+                          <CheckCircle size={13} /> {t.resolve}
                         </button>
                         <button
                           onClick={() => handleReject(c.id)}
                           className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-500 text-xs font-bold rounded-lg hover:bg-red-500 hover:text-white transition-colors border border-red-200"
                         >
-                          <XCircle size={13} /> Reject
+                          <XCircle size={13} /> {t.reject}
                         </button>
                       </div>
                     )}
@@ -573,12 +657,12 @@ export default function AdminDashboard() {
           {activeTab === 'users' && (
             <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
               <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-                <h3 className="font-black text-gray-900">All Users</h3>
+                <h3 className="font-black text-gray-900">{t.newUsers}</h3>
                 <button
                   onClick={() => navigate('/admin/users')}
                   className="text-xs font-bold text-indigo-500 hover:text-indigo-700 flex items-center gap-1"
                 >
-                  Full Management <ChevronRight size={13} />
+                  {t.fullManagement} <ChevronRight size={13} />
                 </button>
               </div>
               <div className="divide-y divide-gray-50">
