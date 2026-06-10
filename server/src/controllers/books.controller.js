@@ -84,6 +84,7 @@ const getRandomBooks = async (req, res) => {
 
 const getBookByName = async (req, res) => {
     try {
+        const maxResults = 10;
         const q = (req.query.q || req.query.name || '').trim();
         if (!q) return res.status(400).json({ message: 'Search info is missing' });
 
@@ -147,8 +148,8 @@ const getBookByName = async (req, res) => {
 
                 return result;
             }));
-
-            return res.status(200).json({ books: mapped, total: mapped.length, source: 'New York Times' });
+            const totalPages = Math.max(1, Math.ceil(mapped.length / maxResults));
+            return res.status(200).json({ books: mapped, total: mapped.length, totalPages, source: 'New York Times' });
         }
 
         try {
@@ -183,8 +184,8 @@ const getBookByName = async (req, res) => {
                     isbns: isbns,
                 };
             });
-
-            return res.status(200).json({ books: mapped, total: mapped.length, source: 'Google Books' });
+            const totalPages = Math.max(1, Math.ceil(mapped.length / maxResults));
+            return res.status(200).json({ books: mapped, total: mapped.length, totalPages, source: 'Google Books' });
 
         } catch (gError) {
             return res.status(500).json({ message: 'Server error during fallback search', error: gError.message });

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Star, Search, Bell, User, ChevronDown } from 'lucide-react';
+import { Star, Search, Bell, User, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 
 function useQuery() {
   return new URLSearchParams(useLocation().search);
@@ -123,6 +123,8 @@ export default function SearchResults() {
   const q = query.get('q') || '';
   const [loading, setLoading] = useState(true);
   const [books, setBooks] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -145,6 +147,7 @@ export default function SearchResults() {
         });
 
         setBooks((data.books || []).map(normalize));
+        setTotalPages(data && data.totalPages ? Number(data.totalPages) : 1);
       } catch (e) {
         console.error('Search error', e);
         setBooks([]);
@@ -154,25 +157,135 @@ export default function SearchResults() {
     };
     fetchSearch();
     return () => ac.abort();
-  }, [q]);
+  }, [q, currentPage]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [totalPages]);
+
+  const buildPagination = () => {
+    const tp = Number(totalPages) || 1;
+    const cp = Number(currentPage) || 1;
+    const items = [];
+    if (tp <= 6) {
+      for (let i = 1; i <= tp; i++) items.push({ type: 'page', page: i });
+      return items;
+    }
+
+    if (cp <= 3) {
+      items.push({ type: 'page', page: 1 });
+      items.push({ type: 'page', page: 2 });
+      items.push({ type: 'page', page: 3 });
+      items.push({ type: 'ellipsis', direction: 'right' });
+      items.push({ type: 'page', page: tp });
+      return items;
+    }
+
+    if (cp >= tp - 2) {
+      items.push({ type: 'page', page: 1 });
+      items.push({ type: 'ellipsis', direction: 'left' });
+      items.push({ type: 'page', page: tp - 2 });
+      items.push({ type: 'page', page: tp - 1 });
+      items.push({ type: 'page', page: tp });
+      return items;
+    }
+
+    // middle
+    items.push({ type: 'page', page: 1 });
+    items.push({ type: 'ellipsis', direction: 'left' });
+    items.push({ type: 'page', page: cp - 1 });
+    items.push({ type: 'page', page: cp });
+    items.push({ type: 'page', page: cp + 1 });
+    items.push({ type: 'ellipsis', direction: 'right' });
+    items.push({ type: 'page', page: tp });
+    return items;
+  };
 
   return (
     <div className="min-h-screen bg-[#fafafa] font-sans text-gray-900">
       <SearchHeader />
-      <div className="max-w-6xl mx-auto px-8 py-8">
-        <h2 className="text-2xl font-bold mb-4">Search results for "{q}"</h2>
-        {loading ? (
-          <div className="text-gray-400">Loading...</div>
-        ) : books.length === 0 ? (
-          <div className="text-gray-500">No results found.</div>
-        ) : (
-          <div className="grid grid-cols-1 gap-4">
-            {books.map((book) => (
-              <DetailedBookCard key={book.id} book={book} />
-            ))}
+      <section className="flex-1">
+        <div className="max-w-6xl mx-auto px-8 py-8">
+
+          {/* Header */}
+          <div className="flex justify-between items-end mb-8">
+            <h2 className="text-3xl font-extrabold text-gray-900">
+              Search results for "{q}"
+            </h2>
           </div>
-        )}
-      </div>
+
+          {/* Book cards */}
+          {loading ? (
+            <div className="text-gray-400">Loading...</div>
+          ) : books.length === 0 ? (
+            <div className="text-gray-500">No results found.</div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4">
+              {books.map((book) => (
+                <DetailedBookCard key={book.id} book={book} />
+              ))}
+            </div>
+          )}
+
+          {/* Pagination */}
+          <div className="mt-10 mb-10 flex flex-col items-center gap-3">
+            <div className="flex items-center gap-4">
+              <button
+                className="p-2 border border-gray-200 rounded-xl hover:bg-white transition-colors disabled:opacity-50"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              >
+                <ChevronLeft size={20} />
+              </button>
+
+              <div className="flex gap-1 items-center">
+                {buildPagination().map((it, idx) => {
+                  if (it.type === 'page') {
+                    return (
+                      <button
+                        key={`p-${it.page}-${idx}`}
+                        onClick={() => setCurrentPage(it.page)}
+                        className={`w-10 h-10 rounded-xl font-bold transition-all ${
+                          currentPage === it.page
+                            ? "bg-indigo-600 text-white shadow-lg"
+                            : "bg-white text-gray-400 hover:bg-gray-50"
+                        }`}
+                      >
+                        {it.page}
+                      </button>
+                    );
+                  }
+                  return (
+                    <button
+                      key={`e-${idx}`}
+                      onClick={() => {
+                        if (it.direction === 'right') setCurrentPage(p => Math.min(totalPages, p + 2));
+                        else setCurrentPage(p => Math.max(1, p - 2));
+                      }}
+                      className="w-10 h-10 rounded-xl font-bold transition-all bg-white text-gray-400 hover:bg-gray-50"
+                      title={it.direction === 'right' ? 'Jump forward 2 pages' : 'Jump back 2 pages'}
+                    >
+                      ...
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                className="p-2 border border-gray-200 rounded-xl hover:bg-white transition-colors disabled:opacity-50"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              >
+                <ChevronRight size={20} />
+              </button>
+            </div>
+            <div className="text-sm text-gray-500 font-medium">
+              Page {currentPage} of {totalPages}
+            </div>
+          </div>
+
+        </div>
+      </section>
     </div>
   );
 }
