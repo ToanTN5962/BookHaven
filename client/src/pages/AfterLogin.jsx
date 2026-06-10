@@ -321,8 +321,8 @@ export default function AfterLoginPage() {
           <section className="flex-1">
             <div className="flex justify-between items-end mb-8">
               <div>
-                <h2 className="text-3xl font-extrabold text-gray-900">Recommended for You</h2>
-                <p className="text-gray-500">Based on your reading history</p>
+                <h2 className="text-3xl font-extrabold text-gray-900">Explore new books</h2>
+                <p className="text-gray-500">Discover interesting books recently</p>
               </div>
               <div className="flex gap-2">
                 <button className="p-2 border border-gray-200 rounded-xl hover:bg-white transition-colors disabled:opacity-50" 
