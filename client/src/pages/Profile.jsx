@@ -6,17 +6,49 @@ import {
   Settings, LogOut, ChevronRight, Edit3
 } from 'lucide-react';
 
+const translations = {
+  en: {
+    load: "Loading...",
+    set: "Settings",
+    logOut: "Log out",
+    noti: "Are you sure you want to log out?",
+    nav: "You will be returned to the homepage or can go to login after logging out.",
+    no: "No",
+    yes: "Yes",
+    success: "Logout successfully",
+    complete: "You have been logged out."
+  },
+  vi: {
+    load: "Đang tải...",
+    set: "Cài đặt",
+    logOut: "Đăng xuất",
+    noti: "Bạn chắc chắn muốn đăng xuất?",
+    nav: "Bạn có thể quay về trang chủ hoặc vào trang đăng nhập sau khi đăng xuất.",
+    no: "Không",
+    yes: "Có",
+    success: "Đăng xuất thành công",
+    complete: "Bạn đã đăng xuất tài khoản."
+  }
+}
+
 const ProfilePage = () => {
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState('bookshelf');
   const [showConfirm, setShowConfirm] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [lang] = useState(() => localStorage.getItem('app_lang') || 'en');
+  const t = translations[lang];
   const navigate = useNavigate();
 
   const handleConfirmYes = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    // notify other components in same tab
+    try { window.dispatchEvent(new Event('userChanged')); } catch (e) {}
     setShowConfirm(false);
     setShowSuccess(true);
+    // navigate to homepage after logout
+    setTimeout(() => navigate('/'), 600);
   };
 
   const handleConfirmNo = () => setShowConfirm(false);
@@ -36,7 +68,7 @@ const ProfilePage = () => {
     fetchProfile();
   }, []);
 
-  if (!user) return <div>Loading...</div>;
+  if (!user) return <div>{t.load}</div>;
   //return user;
 
   const userData = {
@@ -91,7 +123,7 @@ const ProfilePage = () => {
             <div className="space-y-2">
               <button className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 text-gray-700 transition-colors">
                 <div className="flex items-center gap-3 font-medium">
-                  <Settings size={18} /> Settings
+                  <Settings size={18} /> {t.set}
                 </div>
                 <ChevronRight size={16} />
               </button>
@@ -100,7 +132,7 @@ const ProfilePage = () => {
                 className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-red-50 text-red-600 transition-colors"
               >
                 <div className="flex items-center gap-3 font-medium">
-                  <LogOut size={18} /> Log out
+                  <LogOut size={18} /> {t.logOut}
                 </div>
               </button>
             </div>
@@ -122,9 +154,9 @@ const ProfilePage = () => {
           {/* TABS NAVIGATION */}
           <div className="flex border-b border-gray-200 mb-6 gap-8">
             {[
-              { id: 'bookshelf', label: 'Bookshelf', icon: <BookOpen size={18} /> },
-              { id: 'reviews', label: 'My Reviews', icon: <MessageSquare size={18} /> },
-              { id: 'complaints', label: 'Complaints', icon: <AlertTriangle size={18} /> }
+              { id: 'bookshelf', label: lang === 'en' ? 'Bookshelf' : 'Giá sách', icon: <BookOpen size={18} /> },
+              { id: 'reviews', label: lang === 'en' ? 'My Reviews' : 'Đánh giá của tôi', icon: <MessageSquare size={18} /> },
+              { id: 'complaints', label: lang === 'en' ? 'Complaints' : 'Khiếu nại', icon: <AlertTriangle size={18} /> }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -203,11 +235,11 @@ const ProfilePage = () => {
       {showConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-2xl p-6 w-full max-w-md">
-            <h3 className="text-lg font-bold mb-2">Are you sure you want to log out?</h3>
-            <p className="text-sm text-gray-500 mb-6">You will be returned to the homepage or can go to login after logging out.</p>
+            <h3 className="text-lg font-bold mb-2">{t.noti}</h3>
+            <p className="text-sm text-gray-500 mb-6">{t.nav}</p>
             <div className="flex justify-end gap-3">
-              <button onClick={handleConfirmNo} className="px-4 py-2 rounded-md bg-gray-100">No</button>
-              <button onClick={handleConfirmYes} className="px-4 py-2 rounded-md bg-red-600 text-white">Yes</button>
+              <button onClick={handleConfirmNo} className="px-4 py-2 rounded-md bg-gray-100">{t.no}</button>
+              <button onClick={handleConfirmYes} className="px-4 py-2 rounded-md bg-red-600 text-white">{t.yes}</button>
             </div>
           </div>
         </div>
@@ -217,8 +249,8 @@ const ProfilePage = () => {
       {showSuccess && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-2xl p-6 w-full max-w-md text-center">
-            <h3 className="text-lg font-bold mb-2">Logout successfully</h3>
-            <p className="text-sm text-gray-500 mb-6">You have been logged out.</p>
+            <h3 className="text-lg font-bold mb-2">{t.success}</h3>
+            <p className="text-sm text-gray-500 mb-6">{t.complete}</p>
             <div className="flex justify-center gap-4">
               <button onClick={() => navigate('/')} className="px-4 py-2 rounded-md bg-indigo-600 text-white">Homepage</button>
               <button onClick={() => navigate('/login')} className="px-4 py-2 rounded-md bg-gray-100">Login</button>

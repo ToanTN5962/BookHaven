@@ -2,10 +2,8 @@ const prisma = require("../prisma/client");
 
 const createReview = async (req, res) => {
     try {
-        // 1. FE truyền thêm thông tin sách (lấy từ dữ liệu API NYT đang hiển thị)
         const { bookId, bookIsbn, rating, content, title, author, publisher, publishedYear, imageUrl, language, description } = req.body;
 
-        // Prefer authenticated user from token; fallback to body.userId (legacy)
         const uid = req.user && (req.user.sub || req.user.id) ? Number(req.user.sub || req.user.id) : (req.body.userId ? Number(req.body.userId) : null);
         if (!uid) return res.status(401).json({ message: 'Unauthorized: user not found in token or body' });
 
@@ -15,11 +13,10 @@ const createReview = async (req, res) => {
 
         const isbnStr = String(bookIsbn).trim();
 
-        // 2. Kiểm tra User tồn tại
         const user = await prisma.user.findUnique({ where: { id: uid } });
         if (!user) return res.status(404).json({ message: 'User not found' });
 
-        // 3. ĐẢM BẢO SÁCH PHẢI TỒN TẠI (Có thì lấy id, chưa có thì tự tạo mới từ thông tin FE gửi)
+        // ĐẢM BẢO SÁCH PHẢI TỒN TẠI (Có thì lấy id, chưa có thì tự tạo mới từ thông tin FE gửi)
         // normalize publishedYear: accept numeric or parseable string, fallback to current year
         let py = undefined;
         if (publishedYear !== undefined && publishedYear !== null) {
@@ -34,10 +31,10 @@ const createReview = async (req, res) => {
 
         const book = await prisma.book.upsert({
             where: { bookIsbn: isbnStr },
-            update: {}, // Nếu sách đã tồn tại, không cần cập nhật gì cả
+            update: {}, 
             create: {
                 bookIsbn: isbnStr,
-                title: title || 'Unknown Title', // Dự phòng nếu FE quên gửi
+                title: title || 'Unknown Title', 
                 publisher: publisher || 'Unknown Publisher',
                 publishedYear: py,
                 description: description || req.body.description || '',
@@ -47,9 +44,8 @@ const createReview = async (req, res) => {
             }
         });
 
-        const bid = book.id; // Chắc chắn 100% sẽ lấy được bookId hợp lệ ở đây
+        const bid = book.id; 
 
-        // 4. Tạo Review liên kết trực tiếp bằng bookId và bookIsbn
         const created = await prisma.review.create({
             data: {
                 content: content || '',
@@ -60,7 +56,6 @@ const createReview = async (req, res) => {
             include: { user: true }
         });
 
-        // 5. Xử lý Rating thoải mái vì luôn luôn có `bid`
         if (rating !== undefined && rating !== null && rating !== '') {
             const star = parseFloat(rating);
             if (!Number.isNaN(star) && star >= 0 && star <= 5) {

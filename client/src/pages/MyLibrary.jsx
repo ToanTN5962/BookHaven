@@ -6,9 +6,66 @@ import {
   Star, ChevronRight, BookX, BookMarked, Smile
 } from 'lucide-react';
 
-const AfterLoginHeader = () => {
+// ---------------------------------------------------------------------------
+// Từ điển đa ngôn ngữ (Dictionary)
+// ---------------------------------------------------------------------------
+const translations = {
+  en: {
+    myLibrary: "My Library",
+    community: "Community",
+    searchPlaceholder: "Search for your next adventure...",
+    booksInLibrary: "books in your library",
+    loading: "Loading...",
+    viewMore: "View more",
+    readingLabel: "Reading",
+    wishlistLabel: "Wishlist",
+    readLabel: "Read",
+    dropLabel: "Drop",
+    readingEmpty: "You are not reading any books",
+    readingSub: "Add some books to the reading lists",
+    wishlistEmpty: "You don't have any books in your wishlist",
+    wishlistSub: "Let's explore new books and add them to your wishlist",
+    readEmpty: "You haven't completed any books",
+    readSub: "Mark your completed books",
+    dropEmpty: "You haven't dropped any books",
+    dropSub: "Amazing! Try to maintain your reading habit"
+  },
+  vi: {
+    myLibrary: "Thư viện của tôi",
+    community: "Cộng đồng",
+    searchPlaceholder: "Tìm kiếm cuốn sách tiếp theo của bạn...",
+    booksInLibrary: "cuốn sách trong thư viện của bạn",
+    loading: "Đang tải...",
+    viewMore: "Xem thêm",
+    readingLabel: "Đang đọc",
+    wishlistLabel: "Muốn đọc",
+    readLabel: "Đã đọc xong",
+    dropLabel: "Tạm ngưng",
+    readingEmpty: "Bạn chưa để cuốn sách nào ở mục đang đọc",
+    readingSub: "Hãy thêm vài cuốn sách vào danh sách đang đọc nhé",
+    wishlistEmpty: "Kệ sách muốn đọc của bạn đang trống",
+    wishlistSub: "Hãy khám phá thêm nhiều sách mới và lưu lại tại đây",
+    readEmpty: "Bạn chưa hoàn thành cuốn sách nào",
+    readSub: "Đánh dấu những cuốn sách bạn đã đọc xong",
+    dropEmpty: "Bạn chưa tạm ngưng cuốn sách nào",
+    dropSub: "Tuyệt vời! Hãy cố gắng duy trì thói quen đọc sách nhé"
+  }
+};
+
+// ---------------------------------------------------------------------------
+// After Login Header Component
+// ---------------------------------------------------------------------------
+const AfterLoginHeader = ({ lang, setLang }) => {
   const user = JSON.parse(localStorage.getItem("user"));
   const navigate = useNavigate();
+  const t = translations[lang];
+
+  const handleLanguageChange = (newLang) => {
+    setLang(newLang);
+    localStorage.setItem('app_lang', newLang);
+    window.dispatchEvent(new Event('languageChange'));
+  };
+
   return (
     <nav className="flex items-center justify-between px-8 py-4 bg-white border-b border-gray-100 sticky top-0 z-50">
       <div className="flex items-center gap-8">
@@ -22,9 +79,9 @@ const AfterLoginHeader = () => {
           <span
             className="text-indigo-600 border-b-2 border-indigo-600 pb-0.5 cursor-pointer"
           >
-            My Library
+            {t.myLibrary}
           </span>
-          <a href="#" className="hover:text-indigo-600">Community</a>
+          <a href="#" className="hover:text-indigo-600">{t.community}</a>
         </div>
       </div>
 
@@ -32,7 +89,7 @@ const AfterLoginHeader = () => {
         <div className="relative w-full">
           <input
             type="text"
-            placeholder="Search for your next adventure..."
+            placeholder={t.searchPlaceholder}
             className="w-full pl-4 pr-10 py-2 bg-gray-100 border-none rounded-full focus:ring-2 focus:ring-indigo-400 outline-none transition-all"
           />
           <Search className="absolute right-3 top-2.5 text-gray-400" size={18} />
@@ -40,6 +97,26 @@ const AfterLoginHeader = () => {
       </div>
 
       <div className="flex items-center gap-5">
+        {/* NÚT GẠT NGÔN NGỮ (TOGGLE SWITCH) */}
+        <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-full border border-gray-200">
+          <span
+            className={`text-xs font-black px-3 py-1 rounded-full cursor-pointer transition-all select-none ${
+              lang === 'en' ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-200'
+            }`}
+            onClick={() => handleLanguageChange('en')}
+          >
+            EN
+          </span>
+          <span
+            className={`text-xs font-black px-3 py-1 rounded-full cursor-pointer transition-all select-none ${
+              lang === 'vi' ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-200'
+            }`}
+            onClick={() => handleLanguageChange('vi')}
+          >
+            VI
+          </span>
+        </div>
+
         <button className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
           <Bell size={22} />
           <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
@@ -59,7 +136,9 @@ const AfterLoginHeader = () => {
   );
 };
 
-// Book Card 
+// ---------------------------------------------------------------------------
+// Book Card Component
+// ---------------------------------------------------------------------------
 const BookCard = ({ book, type }) => {
   const [imgError, setImgError] = useState(false);
   const navigate = useNavigate();
@@ -122,50 +201,55 @@ const BookCard = ({ book, type }) => {
   );
 };
 
-// Section Config 
-const SECTION_CONFIG = {
+// ---------------------------------------------------------------------------
+// Dynamic Section Configuration Generator
+// ---------------------------------------------------------------------------
+const getSectionConfig = (t) => ({
   reading: {
-    label: 'Reading',
+    label: t.readingLabel,
     icon: <BookOpen size={18} />,
     colorIcon: 'text-blue-500',
     colorBadge: 'bg-blue-50 text-blue-700',
     emptyIcon: <BookX size={36} />,
-    emptyText: 'You are not reading any books',
-    emptySubtext: 'Add some books to the reading lists',
+    emptyText: t.readingEmpty,
+    emptySubtext: t.readingSub,
   },
   wishlist: {
-    label: 'Wishlist',
+    label: t.wishlistLabel,
     icon: <Bookmark size={18} />,
     colorIcon: 'text-amber-500',
     colorBadge: 'bg-amber-50 text-amber-700',
     emptyIcon: <BookMarked size={36} />,
-    emptyText: 'You don\'t have any books in your wishlist',
-    emptySubtext: 'Let\'s explore new books and add them to your wishlist',
+    emptyText: t.wishlistEmpty,
+    emptySubtext: t.wishlistSub,
   },
   read: {
-    label: 'Read',
+    label: t.readLabel,
     icon: <CheckCircle size={18} />,
     colorIcon: 'text-emerald-500',
     colorBadge: 'bg-emerald-50 text-emerald-700',
     emptyIcon: <CheckCircle size={36} />,
-    emptyText: 'You have\'t completed any books',
-    emptySubtext: 'Mark your completed books',
+    emptyText: t.readEmpty,
+    emptySubtext: t.readSub,
   },
   drop: {
-    label: 'Drop',
+    label: t.dropLabel,
     icon: <XCircle size={18} />,
     colorIcon: 'text-red-400',
     colorBadge: 'bg-red-50 text-red-600',
     emptyIcon: <Smile size={36} />,
-    emptyText: 'You haven\'t dropped any books',
-    emptySubtext: 'Amazing! Try to maintain your reading habit',
+    emptyText: t.dropEmpty,
+    emptySubtext: t.dropSub,
   },
-};
+});
 
-// Library Section 
-const LibrarySection = ({ type, books, loading }) => {
+// ---------------------------------------------------------------------------
+// Library Section Component
+// ---------------------------------------------------------------------------
+const LibrarySection = ({ type, books, loading, lang }) => {
   const navigate = useNavigate();
-  const cfg = SECTION_CONFIG[type];
+  const t = translations[lang];
+  const cfg = getSectionConfig(t)[type];
   const shown = books.slice(0, 5);
   const hasMore = books.length > 5;
 
@@ -187,7 +271,7 @@ const LibrarySection = ({ type, books, loading }) => {
             className="flex items-center gap-1 text-sm font-semibold text-indigo-600 hover:underline"
             onClick={() => navigate(`/library/${type}`)}
           >
-            Xem thêm <ChevronRight size={16} />
+            {t.viewMore} <ChevronRight size={16} />
           </button>
         )}
       </div>
@@ -206,8 +290,8 @@ const LibrarySection = ({ type, books, loading }) => {
       ) : books.length === 0 ? (
         <div className="flex flex-col items-center py-10 text-gray-400">
           <span className="opacity-40 mb-3">{cfg.emptyIcon}</span>
-          <p className="text-sm font-medium text-gray-500">{cfg.emptyText}</p>
-          <p className="text-xs text-gray-400 mt-1">{cfg.emptySubtext}</p>
+          <p className="text-sm font-medium text-gray-500 text-center px-4">{cfg.emptyText}</p>
+          <p className="text-xs text-gray-400 mt-1 text-center px-4">{cfg.emptySubtext}</p>
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
@@ -220,8 +304,13 @@ const LibrarySection = ({ type, books, loading }) => {
   );
 };
 
-// Main Page 
+// ---------------------------------------------------------------------------
+// Main MyLibraryPage Component
+// ---------------------------------------------------------------------------
 export default function MyLibraryPage() {
+  const [lang, setLang] = useState(() => localStorage.getItem('app_lang') || 'en');
+  const t = translations[lang];
+
   const [library, setLibrary] = useState({
     reading: [],
     wishlist: [],
@@ -229,6 +318,19 @@ export default function MyLibraryPage() {
     drop: [],
   });
   const [loading, setLoading] = useState(true);
+
+  // Đồng bộ hóa trạng thái ngôn ngữ từ hệ thống
+  useEffect(() => {
+    const handleSyncLang = () => {
+      setLang(localStorage.getItem('app_lang') || 'en');
+    };
+    window.addEventListener('languageChange', handleSyncLang);
+    window.addEventListener('storage', handleSyncLang);
+    return () => {
+      window.removeEventListener('languageChange', handleSyncLang);
+      window.removeEventListener('storage', handleSyncLang);
+    };
+  }, []);
 
   useEffect(() => {
     const fetchLibrary = async () => {
@@ -246,7 +348,7 @@ export default function MyLibraryPage() {
           author: b.author || b.authors || '',
           progress: b.progress ?? null,
           rating: b.rating ?? null,
-          addedAt: b.addedAt || b.addedAt || null,
+          addedAt: b.addedAt || null,
         })) : []);
 
         setLibrary({
@@ -266,24 +368,25 @@ export default function MyLibraryPage() {
   }, []);
 
   const totalBooks = Object.values(library).reduce((sum, arr) => sum + arr.length, 0);
+  const sectionConfig = getSectionConfig(t);
 
   return (
     <div className="min-h-screen bg-[#fafafa] font-sans text-gray-900">
-      <AfterLoginHeader />
+      <AfterLoginHeader lang={lang} setLang={setLang} />
 
       <main className="max-w-6xl mx-auto px-8 py-8">
         {/* Page Title */}
         <div className="mb-8">
-          <h1 className="text-3xl font-extrabold text-gray-900">My Library</h1>
+          <h1 className="text-3xl font-extrabold text-gray-900">{t.myLibrary}</h1>
           <p className="text-gray-500 mt-1">
-            {loading ? 'Đang tải...' : `${totalBooks} cuốn sách trong thư viện của bạn`}
+            {loading ? t.loading : `${totalBooks} ${t.booksInLibrary}`}
           </p>
         </div>
 
         {/* Stats summary */}
         {!loading && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-            {Object.entries(SECTION_CONFIG).map(([key, cfg]) => (
+            {Object.entries(sectionConfig).map(([key, cfg]) => (
               <div key={key} className="bg-white rounded-2xl border border-gray-100 p-4 flex items-center gap-3">
                 <span className={cfg.colorIcon}>{cfg.icon}</span>
                 <div>
@@ -303,6 +406,7 @@ export default function MyLibraryPage() {
               type={type}
               books={library[type]}
               loading={loading}
+              lang={lang}
             />
           ))}
         </div>

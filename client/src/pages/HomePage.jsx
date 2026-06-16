@@ -53,8 +53,29 @@ const Navbar = ({ lang, setLang }) => {
   const navigate = useNavigate();
   const t = translations[lang]; // Lấy bộ từ điển hiện tại
 
-  const stored = localStorage.getItem("user");
-  const user = stored ? JSON.parse(stored) : null;
+  const [user, setUser] = useState(() => {
+    try { const s = localStorage.getItem("user"); return s ? JSON.parse(s) : null; } catch (e) { return null; }
+  });
+
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (!e || !e.key) return;
+      if (e.key === 'user' || e.key === 'token') {
+        try { const s = localStorage.getItem('user'); setUser(s ? JSON.parse(s) : null); } catch (err) { setUser(null); }
+      }
+    };
+
+    const onUserChanged = () => {
+      try { const s = localStorage.getItem('user'); setUser(s ? JSON.parse(s) : null); } catch (err) { setUser(null); }
+    };
+
+    window.addEventListener('storage', onStorage);
+    window.addEventListener('userChanged', onUserChanged);
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener('userChanged', onUserChanged);
+    };
+  }, []);
 
   return (
     <nav className="flex items-center justify-between px-8 py-4 bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm">
@@ -64,7 +85,7 @@ const Navbar = ({ lang, setLang }) => {
           BOOKHAVEN
         </h1>
         <div className="hidden md:flex gap-6 text-gray-600 font-medium">
-          <a href="#" className="flex items-center gap-1 hover:text-indigo-600">{t.home} <ChevronDown size={16} /></a>
+          <a href="#" className="flex items-center gap-1 hover:text-indigo-600" onClick = {user !== null ? () => navigate("/afterlogin") : null}>{t.home} <ChevronDown size={16} /></a>
           <a href="#" className="flex items-center gap-1 hover:text-indigo-600">{t.pages} <ChevronDown size={16} /></a>
           <a href="#" className="flex items-center gap-1 hover:text-indigo-600">{t.shop} <ChevronDown size={16} /></a>
           <a href="#" className="hover:text-indigo-600">{t.contact}</a>

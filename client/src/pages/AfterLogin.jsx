@@ -34,7 +34,7 @@ const translations = {
     reading: "Đang đọc",
     wantToRead: "Muốn đọc",
     completed: "Đã hoàn thành",
-    dropped: "Đã bỏ dở",
+    dropped: "Tạm ngưng",
     recentlyAdded: "Vừa thêm gần đây",
     noCover: "Không có ảnh bìa",
     exploreTitle: "Khám phá sách mới",

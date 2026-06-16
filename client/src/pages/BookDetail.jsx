@@ -82,7 +82,7 @@ const translations = {
 const getStatuses = (lang) => [
   { value: 'READING',  label: lang === 'vi' ? 'Đang đọc' : 'Reading',      icon: <BookOpen size={14} />,    color: 'bg-blue-50 text-blue-600' },
   { value: 'WISHLIST', label: lang === 'vi' ? 'Muốn đọc' : 'Want to Read', icon: <BookMarked size={14} />,  color: 'bg-amber-50 text-amber-600' },
-  { value: 'READ',     label: lang === 'vi' ? 'Đã đọc xong' : 'Completed',  icon: <CheckCircle size={14} />, color: 'bg-emerald-50 text-emerald-600' },
+  { value: 'READ',     label: lang === 'vi' ? 'Đã hoàn thành' : 'Completed',  icon: <CheckCircle size={14} />, color: 'bg-emerald-50 text-emerald-600' },
   { value: 'DROP',     label: lang === 'vi' ? 'Tạm ngưng' : 'Dropped',      icon: <XCircle size={14} />,     color: 'bg-red-50 text-red-500' },
 ];
 

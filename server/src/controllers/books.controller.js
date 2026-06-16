@@ -34,7 +34,6 @@ const getRandomBooks = async (req, res) => {
                 console.log(`NYT fetch time (ms): ${tFetch}, status: ${nytRes.status}`);
 
             try {
-                // cache for 1 hour
                     await redisClient.setEx(cacheKey, 3600, JSON.stringify(nytData));
                     console.log('Cached NYT overview in Redis');
             } catch (err) {
