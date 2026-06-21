@@ -81,6 +81,218 @@ const getRandomBooks = async (req, res) => {
     }
 };
 
+// const getBookByName = async (req, res) => {
+//     try {
+//         const maxResults = 10;
+//         const q = (req.query.q || req.query.name || '').trim();
+//         if (!q) return res.status(400).json({ message: 'Search info is missing' });
+
+//         const nytKey = process.env.NYT_API_KEY;
+//         const googleKey = process.env.GOOGLE_BOOKS_API_KEY;
+
+//         let nytBooks = [];
+//         let nytSuccess = false;
+
+//         if (nytKey) {
+//             try {
+//                 const nytUrl = `https://api.nytimes.com/svc/books/v3/lists/best-sellers/history.json?title=${encodeURIComponent(q)}&api-key=${nytKey}`;
+//                 const nytResp = await fetch(nytUrl);
+                
+//                 if (nytResp.ok) {
+//                     const nytData = await nytResp.json();
+//                     nytBooks = Array.isArray(nytData.results) ? nytData.results : [];
+//                     nytSuccess = true;
+//                 }
+//             } catch (e) {
+//                 console.error('NYT primary fetch error, moving to fallback...');
+//             }
+//         }
+
+//         if (nytSuccess && nytBooks.length > 0) {
+//             const mapped = await Promise.all(nytBooks.map(async (r, i) => {
+//                 const isbn = r.primary_isbn13 || r.primary_isbn10 || '';
+                
+//                 let fallbackImage = isbn ? `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg` : null;
+
+//                 const result = {
+//                     id: isbn || `nyt-id-${i}`,
+//                     bookIsbn: isbn,
+//                     title: r.title || '',
+//                     author: r.author || '',
+//                     description: r.description || r.notes || '',
+//                     publisher: r.publisher || '',
+//                     publishedDate: r.published_date || null,
+//                     book_image: fallbackImage,
+//                     rating: null, 
+//                     isbns: r.isbns || [],
+//                 };
+
+//                 if (!result.book_image || !result.description) {
+//                     try {
+//                         const lookupQuery = isbn ? `isbn:${isbn}` : result.title;
+//                         const gUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(lookupQuery)}&maxResults=1${googleKey ? `&key=${googleKey}` : ''}`;
+//                         const gResp = await fetch(gUrl);
+                        
+//                         if (gResp.ok) {
+//                             const gData = await gResp.json();
+//                             const gItem = gData.items?.[0]?.volumeInfo;
+//                             if (gItem) {
+//                                 result.book_image = result.book_image || gItem.imageLinks?.thumbnail || gItem.imageLinks?.smallThumbnail || null;
+//                                 result.description = result.description || gItem.description || '';
+//                                 result.rating = gItem.averageRating || null;
+//                             }
+//                         }
+//                     } catch (err) { /* Bỏ qua nếu việc supplement thất bại */ }
+//                 }
+
+//                 return result;
+//             }));
+
+//             // Character-level relevance scoring: per-character matches +
+//             // longest-common-substring bonus so partial char sequences rank higher.
+//             const normalize = (s) => (s || '').toLowerCase();
+//             const compact = (s) => normalize(s).replace(/\s+/g, '');
+
+//             const longestCommonSubstring = (a, b) => {
+//                 if (!a || !b) return 0;
+//                 const m = a.length, n = b.length;
+//                 let max = 0;
+//                 const dp = Array(n + 1).fill(0);
+//                 for (let i = 1; i <= m; i++) {
+//                     for (let j = n; j >= 1; j--) {
+//                         if (a[i - 1] === b[j - 1]) {
+//                             dp[j] = dp[j - 1] + 1;
+//                             if (dp[j] > max) max = dp[j];
+//                         } else {
+//                             dp[j] = 0;
+//                         }
+//                     }
+//                 }
+//                 return max;
+//             };
+
+//             const qChars = compact(q);
+//             const scored = mapped.map((b) => {
+//                 const title = normalize(b.title || '');
+//                 const author = normalize(b.author || '');
+//                 const desc = normalize(b.description || '');
+//                 let score = 0;
+
+//                 // per-character presence
+//                 for (const ch of qChars) {
+//                     if (!ch) continue;
+//                     if (title.includes(ch)) score += 3; // character in title
+//                     if (author.includes(ch)) score += 2;
+//                     if (desc.includes(ch)) score += 1;
+//                 }
+
+//                 // longest common substring bonus (favor consecutive matches)
+//                 const lcsTitle = longestCommonSubstring(qChars, compact(title));
+//                 const lcsAuthor = longestCommonSubstring(qChars, compact(author));
+//                 const lcsDesc = longestCommonSubstring(qChars, compact(desc));
+//                 score += lcsTitle * 5; // stronger bonus for consecutive title match
+//                 score += lcsAuthor * 3;
+//                 score += lcsDesc * 1;
+
+//                 return { ...b, _score: score };
+//             });
+
+//             scored.sort((a, b) => b._score - a._score);
+
+//             const totalPages = Math.max(1, Math.ceil(scored.length / maxResults));
+//             return res.status(200).json({ books: scored.map(s => { delete s._score; return s; }), total: scored.length, totalPages, source: 'New York Times' });
+//         }
+
+//         try {
+//             const gUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}${googleKey ? `&key=${googleKey}` : ''}`;
+//             const gResp = await fetch(gUrl);
+            
+//             if (!gResp.ok) {
+//                 return res.status(gResp.status).json({ message: 'Both NYT and Google Books requests failed' });
+//             }
+
+//             const gData = await gResp.json();
+//             const items = Array.isArray(gData.items) ? gData.items : [];
+
+//             const mapped = items.map((item) => {
+//                 const info = item.volumeInfo || {};
+//                 // Lấy ISBN ra để phục vụ việc lưu xuống DB ở FE khi cần
+//                 const isbns = info.industryIdentifiers || [];
+//                 const isbn13 = isbns.find(id => id.type === 'ISBN_13')?.identifier;
+//                 const isbn10 = isbns.find(id => id.type === 'ISBN_10')?.identifier;
+//                 const finalIsbn = isbn13 || isbn10 || '';
+
+//                 return {
+//                     id: item.id || finalIsbn,
+//                     bookIsbn: finalIsbn,
+//                     title: info.title || '',
+//                     author: info.authors?.join(', ') || '',
+//                     description: info.description || info.subtitle || 'No description available.',
+//                     publisher: info.publisher || '',
+//                     publishedDate: info.publishedDate || '',
+//                     book_image: info.imageLinks?.thumbnail || info.imageLinks?.smallThumbnail || null,
+//                     rating: info.averageRating || null,
+//                     isbns: isbns,
+//                 };
+//             });
+//             // Character-level relevance scoring to support matching by each character
+//             const normalize = (s) => (s || '').toLowerCase();
+//             const compact = (s) => normalize(s).replace(/\s+/g, '');
+//             const longestCommonSubstring = (a, b) => {
+//                 if (!a || !b) return 0;
+//                 const m = a.length, n = b.length;
+//                 let max = 0;
+//                 const dp = Array(n + 1).fill(0);
+//                 for (let i = 1; i <= m; i++) {
+//                     for (let j = n; j >= 1; j--) {
+//                         if (a[i - 1] === b[j - 1]) {
+//                             dp[j] = dp[j - 1] + 1;
+//                             if (dp[j] > max) max = dp[j];
+//                         } else {
+//                             dp[j] = 0;
+//                         }
+//                     }
+//                 }
+//                 return max;
+//             };
+
+//             const qChars = compact(q);
+//             const scored = mapped.map((b) => {
+//                 const title = normalize(b.title || '');
+//                 const author = normalize(b.author || '');
+//                 const desc = normalize(b.description || '');
+//                 let score = 0;
+
+//                 for (const ch of qChars) {
+//                     if (!ch) continue;
+//                     if (title.includes(ch)) score += 3;
+//                     if (author.includes(ch)) score += 2;
+//                     if (desc.includes(ch)) score += 1;
+//                 }
+
+//                 const lcsTitle = longestCommonSubstring(qChars, compact(title));
+//                 const lcsAuthor = longestCommonSubstring(qChars, compact(author));
+//                 const lcsDesc = longestCommonSubstring(qChars, compact(desc));
+//                 score += lcsTitle * 5;
+//                 score += lcsAuthor * 3;
+//                 score += lcsDesc * 1;
+
+//                 return { ...b, _score: score };
+//             });
+
+//             scored.sort((a, b) => b._score - a._score);
+//             const totalPages = Math.max(1, Math.ceil(scored.length / maxResults));
+//             return res.status(200).json({ books: scored.map(s => { delete s._score; return s; }), total: scored.length, totalPages, source: 'Google Books' });
+
+//         } catch (gError) {
+//             return res.status(500).json({ message: 'Server error during fallback search', error: gError.message });
+//         }
+
+//     } catch (error) {
+//         return res.status(500).json({ message: 'Server error', error: error.message });
+//     }
+// };
+
 const getBookByName = async (req, res) => {
     try {
         const maxResults = 10;
@@ -90,105 +302,169 @@ const getBookByName = async (req, res) => {
         const nytKey = process.env.NYT_API_KEY;
         const googleKey = process.env.GOOGLE_BOOKS_API_KEY;
 
-        let nytBooks = [];
-        let nytSuccess = false;
+        let combinedBooks = [];
+        let sourceUsed = [];
 
-        if (nytKey) {
+        // 1. Gọi song song cả 2 API để tối ưu tốc độ và lấy tối đa dữ liệu
+        const apiPromises = [];
+
+        // Luồng Google Books (Tìm kiếm từ khóa rất mạnh)
+        const fetchGoogleBooks = async () => {
+            try {
+                const gUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=20${googleKey ? `&key=${googleKey}` : ''}`;
+                const gResp = await fetch(gUrl);
+                if (gResp.ok) {
+                    const gData = await gResp.json();
+                    const items = Array.isArray(gData.items) ? gData.items : [];
+                    sourceUsed.push('Google Books');
+                    return items.map(item => {
+                        const info = item.volumeInfo || {};
+                        const isbns = info.industryIdentifiers || [];
+                        const isbn13 = isbns.find(id => id.type === 'ISBN_13')?.identifier;
+                        const isbn10 = isbns.find(id => id.type === 'ISBN_10')?.identifier;
+                        const finalIsbn = isbn13 || isbn10 || '';
+                        return {
+                            id: item.id || finalIsbn,
+                            bookIsbn: finalIsbn,
+                            title: info.title || '',
+                            author: info.authors?.join(', ') || '',
+                            description: info.description || info.subtitle || 'No description available.',
+                            publisher: info.publisher || '',
+                            publishedDate: info.publishedDate || '',
+                            book_image: info.imageLinks?.thumbnail || info.imageLinks?.smallThumbnail || null,
+                            rating: info.averageRating || null,
+                            isbns: isbns
+                        };
+                    });
+                }
+            } catch (e) {
+                console.error('Google Books fetch error:', e.message);
+            }
+            return [];
+        };
+
+        // Luồng NYT (Chỉ chính xác khi từ khóa dài/đầy đủ)
+        const fetchNytBooks = async () => {
+            if (!nytKey) return [];
             try {
                 const nytUrl = `https://api.nytimes.com/svc/books/v3/lists/best-sellers/history.json?title=${encodeURIComponent(q)}&api-key=${nytKey}`;
                 const nytResp = await fetch(nytUrl);
-                
                 if (nytResp.ok) {
                     const nytData = await nytResp.json();
-                    nytBooks = Array.isArray(nytData.results) ? nytData.results : [];
-                    nytSuccess = true;
+                    const nytResults = Array.isArray(nytData.results) ? nytData.results : [];
+                    if (nytResults.length > 0) {
+                        sourceUsed.push('New York Times');
+                    }
+                    return nytResults.map((r, i) => {
+                        const isbn = r.primary_isbn13 || r.primary_isbn10 || '';
+                        return {
+                            id: isbn || `nyt-id-${i}`,
+                            bookIsbn: isbn,
+                            title: r.title || '',
+                            author: r.author || '',
+                            description: r.description || r.notes || '',
+                            publisher: r.publisher || '',
+                            publishedDate: r.published_date || null,
+                            book_image: isbn ? `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg` : null,
+                            rating: null,
+                            isbns: r.isbns || []
+                        };
+                    });
                 }
             } catch (e) {
-                console.error('NYT primary fetch error, moving to fallback...');
+                console.error('NYT fetch error:', e.message);
             }
-        }
+            return [];
+        };
 
-        if (nytSuccess && nytBooks.length > 0) {
-            const mapped = await Promise.all(nytBooks.map(async (r, i) => {
-                const isbn = r.primary_isbn13 || r.primary_isbn10 || '';
-                
-                let fallbackImage = isbn ? `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg` : null;
+        // Chạy song song cả 2 request
+        const [googleResults, nytResults] = await Promise.all([
+            fetchGoogleBooks(),
+            fetchNytBooks()
+        ]);
 
-                const result = {
-                    id: isbn || `nyt-id-${i}`,
-                    bookIsbn: isbn,
-                    title: r.title || '',
-                    author: r.author || '',
-                    description: r.description || r.notes || '',
-                    publisher: r.publisher || '',
-                    publishedDate: r.published_date || null,
-                    book_image: fallbackImage,
-                    rating: null, 
-                    isbns: r.isbns || [],
-                };
-
-                if (!result.book_image || !result.description) {
-                    try {
-                        const lookupQuery = isbn ? `isbn:${isbn}` : result.title;
-                        const gUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(lookupQuery)}&maxResults=1${googleKey ? `&key=${googleKey}` : ''}`;
-                        const gResp = await fetch(gUrl);
-                        
-                        if (gResp.ok) {
-                            const gData = await gResp.json();
-                            const gItem = gData.items?.[0]?.volumeInfo;
-                            if (gItem) {
-                                result.book_image = result.book_image || gItem.imageLinks?.thumbnail || gItem.imageLinks?.smallThumbnail || null;
-                                result.description = result.description || gItem.description || '';
-                                result.rating = gItem.averageRating || null;
-                            }
-                        }
-                    } catch (err) { /* Bỏ qua nếu việc supplement thất bại */ }
+        // Gộp kết quả từ 2 nguồn (loại bỏ trùng lặp qua ISBN nếu có)
+        const seenIsbns = new Set();
+        const rawCombined = [...googleResults, ...nytResults];
+        
+        for (const book of rawCombined) {
+            if (book.bookIsbn) {
+                if (!seenIsbns.has(book.bookIsbn)) {
+                    seenIsbns.add(book.bookIsbn);
+                    combinedBooks.push(book);
                 }
-
-                return result;
-            }));
-            const totalPages = Math.max(1, Math.ceil(mapped.length / maxResults));
-            return res.status(200).json({ books: mapped, total: mapped.length, totalPages, source: 'New York Times' });
+            } else {
+                combinedBooks.push(book); // Giữ lại nếu không có ISBN để định danh
+            }
         }
 
-        try {
-            const gUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}${googleKey ? `&key=${googleKey}` : ''}`;
-            const gResp = await fetch(gUrl);
+        if (combinedBooks.length === 0) {
+            return res.status(200).json({ books: [], total: 0, totalPages: 0, source: 'None' });
+        }
+
+        // 2. Thuật toán lọc và chấm điểm thông minh (Word/Substring Relevance Scoring)
+        const queryLower = q.toLowerCase();
+
+        const scored = combinedBooks.map(book => {
+            const titleLower = (book.title || '').toLowerCase();
+            const authorLower = (book.author || '').toLowerCase();
+            const descLower = (book.description || '').toLowerCase();
             
-            if (!gResp.ok) {
-                return res.status(gResp.status).json({ message: 'Both NYT and Google Books requests failed' });
+            let score = 0;
+
+            // TRƯỜNG HỢP ƯU TIÊN 1: Khớp chính xác hoàn toàn cụm từ tìm kiếm
+            if (titleLower === queryLower) {
+                score += 200; // Khớp khít tên sách -> Đẩy lên đầu tiên
+            } else if (titleLower.startsWith(queryLower)) {
+                score += 100; // Tên sách bắt đầu bằng từ khóa
+            } else if (titleLower.includes(queryLower)) {
+                score += 50;  // Tên sách có chứa từ khóa
             }
 
-            const gData = await gResp.json();
-            const items = Array.isArray(gData.items) ? gData.items : [];
+            if (authorLower.includes(queryLower)) score += 30; // Tác giả chứa từ khóa
+            if (descLower.includes(queryLower)) score += 5;    // Mô tả chứa từ khóa
 
-            const mapped = items.map((item) => {
-                const info = item.volumeInfo || {};
-                // Lấy ISBN ra để phục vụ việc lưu xuống DB ở FE khi cần
-                const isbns = info.industryIdentifiers || [];
-                const isbn13 = isbns.find(id => id.type === 'ISBN_13')?.identifier;
-                const isbn10 = isbns.find(id => id.type === 'ISBN_10')?.identifier;
-                const finalIsbn = isbn13 || isbn10 || '';
+            // TRƯỜNG HỢP ƯU TIÊN 2: Khớp từng từ đơn lẻ (Hỗ trợ viết đảo từ hoặc thiếu từ)
+            const queryWords = queryLower.split(/\s+/).filter(w => w.length > 0);
+            let wordsMatched = 0;
+            
+            for (const word of queryWords) {
+                if (titleLower.includes(word)) {
+                    score += 15;
+                    wordsMatched++;
+                } else if (authorLower.includes(word)) {
+                    score += 10;
+                }
+            }
 
-                return {
-                    id: item.id || finalIsbn,
-                    bookIsbn: finalIsbn,
-                    title: info.title || '',
-                    author: info.authors?.join(', ') || '',
-                    description: info.description || info.subtitle || 'No description available.',
-                    publisher: info.publisher || '',
-                    publishedDate: info.publishedDate || '',
-                    book_image: info.imageLinks?.thumbnail || info.imageLinks?.smallThumbnail || null,
-                    rating: info.averageRating || null,
-                    isbns: isbns,
-                };
-            });
-            const totalPages = Math.max(1, Math.ceil(mapped.length / maxResults));
-            return res.status(200).json({ books: mapped, total: mapped.length, totalPages, source: 'Google Books' });
+            // Thưởng điểm nếu khớp càng nhiều từ trong cụm từ khóa
+            if (wordsMatched === queryWords.length && queryWords.length > 1) {
+                score += 40; 
+            }
 
-        } catch (gError) {
-            return res.status(500).json({ message: 'Server error during fallback search', error: gError.message });
-        }
+            return { ...book, _score: score };
+        });
+
+        // Lọc bỏ các kết quả có điểm số bằng 0 (hoàn toàn không liên quan đến từ khóa)
+        const filteredAndScored = scored.filter(b => b._score > 0);
+
+        // Sắp xếp giảm dần theo điểm số mức độ liên quan
+        filteredAndScored.sort((a, b) => b._score - a._score);
+
+        // Giới hạn số lượng kết quả trả về
+        const finalBooks = filteredAndScored.slice(0, maxResults).map(b => {
+            delete b._score;
+            return b;
+        });
+
+        const totalPages = Math.max(1, Math.ceil(filteredAndScored.length / maxResults));
+
+        return res.status(200).json({
+            books: finalBooks,
+            total: filteredAndScored.length,
+            totalPages,
+            source: sourceUsed.join(' + ')
+        });
 
     } catch (error) {
         return res.status(500).json({ message: 'Server error', error: error.message });
