@@ -1,11 +1,53 @@
 const prisma = require("../prisma/client");
 const redisClient = require("../utils/redisClient");
 
+const hashStringToSeed = (value) => {
+    let hash = 2166136261;
+    for (let i = 0; i < value.length; i++) {
+        hash ^= value.charCodeAt(i);
+        hash = Math.imul(hash, 16777619);
+    }
+
+    return hash >>> 0;
+};
+
+const createSeededRandom = (seed) => {
+    let state = seed || 1;
+    return () => {
+        state = Math.imul(state ^ (state >>> 15), 1 | state);
+        state ^= state + Math.imul(state ^ (state >>> 7), 61 | state);
+        return ((state ^ (state >>> 14)) >>> 0) / 4294967296;
+    };
+};
+
+const bookCategoryKeywords = {
+    technology: ['technology', 'computer', 'software', 'programming', 'coding', 'data', 'ai', 'artificial intelligence', 'internet', 'digital', 'startup'],
+    science: ['science', 'scientific', 'physics', 'biology', 'chemistry', 'space', 'nature', 'climate', 'medicine', 'health'],
+    literature: ['fiction', 'literature', 'literary', 'novel', 'paperback', 'hardcover', 'e-book', 'combined print'],
+    business: ['business', 'finance', 'economics', 'management', 'leadership', 'money', 'investing', 'career'],
+};
+
+const matchesBookCategory = (book, category) => {
+    const normalizedCategory = (category || 'all').toLowerCase();
+    if (normalizedCategory === 'all') return true;
+    if (normalizedCategory === 'hot') return !book.rank || Number(book.rank) <= 5;
+
+    const searchableText = [
+        book.list_name,
+        book.title,
+        book.description,
+        book.contributor,
+    ].filter(Boolean).join(' ').toLowerCase();
+
+    return (bookCategoryKeywords[normalizedCategory] || []).some((keyword) =>
+        searchableText.includes(keyword)
+    );
+};
+
 const getRandomBooks = async (req, res) => {
     try {
-        const { page = 1 } = req.query;
+        const { page = 1, sessionId, category = 'all' } = req.query;
         const maxResults = 10;
-        const startIndex = (page - 1) * maxResults;
         // Use NYT Best Sellers overview to pick random best-seller books
         // Try Redis cache first to avoid hitting NYT repeatedly
         const cacheKey = 'nyt:overview';
@@ -51,15 +93,21 @@ const getRandomBooks = async (req, res) => {
             return res.status(200).json({ books: [], totalPages: 0 });
         }
 
+        const filteredBooks = allBooks.filter((book) => matchesBookCategory(book, category));
+
+        const random = sessionId
+            ? createSeededRandom(hashStringToSeed(String(sessionId)))
+            : Math.random;
+
         // shuffle and take up to maxResults
-        for (let i = allBooks.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [allBooks[i], allBooks[j]] = [allBooks[j], allBooks[i]];
+        for (let i = filteredBooks.length - 1; i > 0; i--) {
+            const j = Math.floor(random() * (i + 1));
+            [filteredBooks[i], filteredBooks[j]] = [filteredBooks[j], filteredBooks[i]];
         }
 
         // paginate the shuffled list using requested page
         const pageNum = Number(page) || 1;
-        const selected = allBooks.slice((pageNum - 1) * maxResults, (pageNum - 1) * maxResults + maxResults);
+        const selected = filteredBooks.slice((pageNum - 1) * maxResults, (pageNum - 1) * maxResults + maxResults);
 
         const books = (selected || []).map((book) => ({
             id: book.primary_isbn13 || book.primary_isbn10 || book.title,
@@ -71,10 +119,10 @@ const getRandomBooks = async (req, res) => {
             tags: [book.list_name].filter(Boolean),
         }));
 
-        const totalPages = Math.max(1, Math.ceil(allBooks.length / maxResults));
+        const totalPages = Math.max(1, Math.ceil(filteredBooks.length / maxResults));
 
         // include counts for debugging/visibility
-        return res.status(200).json({ books, totalPages, totalBooks: allBooks.length, listsCount: lists.length });
+        return res.status(200).json({ books, totalPages, totalBooks: filteredBooks.length, listsCount: lists.length });
     } catch (error) {
         //console.error("Lỗi books controller:", error);
         return res.status(500).json({ message: "Server error", error: error.message });

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { resetHotBooksSessionId } from '../utils/hotBooksSession';
 import { 
   User, Mail, Phone, Calendar, MapPin, 
   BookOpen, Star, MessageSquare, AlertTriangle, 
@@ -43,6 +44,7 @@ const ProfilePage = () => {
   const handleConfirmYes = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    resetHotBooksSessionId();
     // notify other components in same tab
     try { window.dispatchEvent(new Event('userChanged')); } catch (e) {}
     setShowConfirm(false);

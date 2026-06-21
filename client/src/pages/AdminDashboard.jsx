@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { resetHotBooksSessionId } from '../utils/hotBooksSession';
 import {
   BookOpen, Users, AlertTriangle, Star,
   Search, Plus, ChevronRight, LogOut,
@@ -360,7 +361,10 @@ export default function AdminDashboard() {
             <ShieldCheck size={16} /> {t.settings}
           </button>
           <button
-            onClick={() => navigate('/login')}
+            onClick={() => {
+              resetHotBooksSessionId();
+              navigate('/login');
+            }}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-gray-500 hover:bg-red-50 hover:text-red-500 transition-all"
           >
             <LogOut size={16} /> {t.logout}

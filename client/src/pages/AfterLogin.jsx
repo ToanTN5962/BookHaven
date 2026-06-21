@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getHotBooksSessionId } from '../utils/hotBooksSession';
 import { 
   Search, Bell, User, ChevronDown, BookOpen, 
   CheckCircle, Bookmark, XCircle, ChevronLeft, ChevronRight, Star 
@@ -23,7 +24,17 @@ const translations = {
     exploreSubtitle: "Discover interesting books recently",
     viewDetail: "View Detail",
     loading: "Loading...",
-    pageOf: "Page {current} of {total}"
+    pageOf: "Page {current} of {total}",
+    bookFilter: "Book Filter",
+    noBooksFound: "No books found for this filter.",
+    filters: {
+      all: "All Books",
+      hot: "Hot Books",
+      technology: "Technology",
+      science: "Science",
+      literature: "Literature",
+      business: "Business"
+    }
   },
   vi: {
     myLibrary: "Thư viện của tôi",
@@ -41,9 +52,28 @@ const translations = {
     exploreSubtitle: "Tìm kiếm những cuốn sách thú vị gần đây",
     viewDetail: "Xem chi tiết",
     loading: "Đang tải...",
-    pageOf: "Trang {current} trên {total}"
+    pageOf: "Trang {current} trên {total}",
+    bookFilter: "Bộ lọc sách",
+    noBooksFound: "Không tìm thấy sách cho bộ lọc này.",
+    filters: {
+      all: "Tất cả sách",
+      hot: "Sách hot",
+      technology: "Công nghệ",
+      science: "Khoa học",
+      literature: "Văn học",
+      business: "Kinh doanh"
+    }
   }
 };
+
+const bookFilterOptions = [
+  { value: 'all', labelKey: 'all' },
+  { value: 'hot', labelKey: 'hot' },
+  { value: 'technology', labelKey: 'technology' },
+  { value: 'science', labelKey: 'science' },
+  { value: 'literature', labelKey: 'literature' },
+  { value: 'business', labelKey: 'business' },
+];
 
 // 2. Header nhận lang và setLang để xử lý nút gạt ngôn ngữ
 const AfterLoginHeader = ({ lang, setLang }) => {
@@ -286,6 +316,7 @@ export default function AfterLoginPage() {
   const [books, setBooks] = useState([]);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [selectedFilter, setSelectedFilter] = useState('all');
 
   // 5. Đồng bộ state ngôn ngữ xuyên suốt các trang thông qua localStorage
   const [lang, setLang] = useState(() => localStorage.getItem('app_lang') || 'en');
@@ -300,7 +331,9 @@ export default function AfterLoginPage() {
     const fetchBooks = async () => {
       setLoading(true);
       try {
-        const response = await fetch(`http://localhost:3000/api/books/random?page=${currentPage}`, { signal: ac.signal });
+        const sessionId = encodeURIComponent(getHotBooksSessionId());
+        const filter = encodeURIComponent(selectedFilter);
+        const response = await fetch(`http://localhost:3000/api/books/random?page=${currentPage}&sessionId=${sessionId}&category=${filter}`, { signal: ac.signal });
         if (!response.ok) {
           setBooks([]);
           return;
@@ -319,11 +352,16 @@ export default function AfterLoginPage() {
 
     fetchBooks();
     return () => ac.abort();
-  }, [currentPage]);
+  }, [currentPage, selectedFilter]);
 
   useEffect(() => {
     if (currentPage > totalPages) setCurrentPage(totalPages);
-  }, [totalPages]);
+  }, [currentPage, totalPages]);
+
+  const handleFilterChange = (event) => {
+    setSelectedFilter(event.target.value);
+    setCurrentPage(1);
+  };
 
   const buildPagination = () => {
     const tp = Number(totalPages) || 1;
@@ -392,9 +430,32 @@ export default function AfterLoginPage() {
               </div>
             </div>
 
+            <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <label htmlFor="book-filter" className="text-sm font-bold text-gray-500 uppercase tracking-wider">
+                {t.bookFilter}
+              </label>
+              <div className="relative w-full sm:w-64">
+                <select
+                  id="book-filter"
+                  value={selectedFilter}
+                  onChange={handleFilterChange}
+                  className="w-full appearance-none bg-white border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm font-semibold text-gray-700 shadow-sm outline-none transition-all focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
+                >
+                  {bookFilterOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {t.filters[option.labelKey]}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown size={18} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 gap-6">
               {loading ? (
                 <div className="text-center text-gray-400 py-20 font-medium">{t.loading}</div>
+              ) : books.length === 0 ? (
+                <div className="text-center text-gray-400 py-20 font-medium">{t.noBooksFound}</div>
               ) : (
                 books.map((book) => (
                   <DetailedBookCard key={book.id} book={book} lang={lang} />
