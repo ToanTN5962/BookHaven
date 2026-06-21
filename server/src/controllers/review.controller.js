@@ -74,6 +74,29 @@ const createReview = async (req, res) => {
     }
 };
 
+const getMyReviews = async (req, res) => {
+    try {
+        const userId = Number(req.user.sub);
+        const reviews = await prisma.review.findMany({
+            where: { userId },
+            orderBy: { createdAt: 'desc' },
+            include: { book: { select: { id: true, title: true, imageUrl: true, authors: { include: { author: { select: { fullName: true } } } } } } }
+        });
+
+        const mapped = reviews.map(r => ({
+            id: r.id,
+            content: r.content,
+            createdAt: r.createdAt,
+            book: r.book ? { id: r.book.id, title: r.book.title, imageUrl: r.book.imageUrl, author: (r.book.authors || []).map(a => a.author.fullName).join(', ') } : null
+        }));
+
+        return res.status(200).json({ reviews: mapped });
+    } catch (error) {
+        return res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+
 module.exports = {
-    createReview
+    createReview,
+    getMyReviews
 };

@@ -26,6 +26,24 @@ const createComplaint = async (req, res) => {
     }
 };
 
+const getMyComplaints = async (req, res) => {
+    try{
+        const userId = Number(req.user.sub);
+
+        const complaints = await prisma.complaint.findMany({
+            where: { userId },
+            orderBy: { createdAt: 'desc' },
+            include: { handledBy: { select: { id: true, fullName: true } } }
+        });
+
+        return res.status(200).json({ complaints });
+    }
+    catch(error){
+        return res.status(500).json({message: "Internal server error", error: error.message});
+    }
+};
+
 module.exports = {
-    createComplaint
+    createComplaint,
+    getMyComplaints
 };

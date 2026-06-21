@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getHotBooksSessionId } from '../utils/hotBooksSession';
+import NotificationBell from '../components/NotificationBell';
 import { 
-  Search, Bell, User, ChevronDown, BookOpen, 
+  Search, User, ChevronDown, BookOpen, 
   CheckCircle, Bookmark, XCircle, ChevronLeft, ChevronRight, Star 
 } from 'lucide-react';
 
@@ -134,10 +135,7 @@ const AfterLoginHeader = ({ lang, setLang }) => {
           </span>
         </div>
 
-        <button className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
-          <Bell size={22} />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-        </button>
+        <NotificationBell />
         <button 
           className="flex items-center gap-2 p-1 pr-3 hover:bg-gray-100 rounded-full transition-all border border-gray-100"
           onClick={() => navigate("/profile")}

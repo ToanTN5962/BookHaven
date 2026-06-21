@@ -234,15 +234,40 @@ export default function AdminDashboard() {
     REJECTED: complaints.filter(c => c.status === 'REJECTED').length,
   };
 
-  const handleResolve = (id) => {
-    setComplaints(prev => prev.map(c => c.id === id ? { ...c, status: 'SOLVED' } : c));
-    setStats(s => ({ ...s, pendingComplaints: Math.max(0, s.pendingComplaints - 1) }));
+  const updateComplaintStatus = async (id, status) => {
+    const token = localStorage.getItem('token');
+    const previous = complaints.find(c => c.id === id);
+
+    try {
+      const res = await fetch(`http://localhost:3000/api/admin/complaints/${id}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Could not update complaint');
+
+      const updatedComplaint = {
+        ...(data.complaint || {}),
+        status: data.complaint?.solvingStatus || status,
+      };
+
+      setComplaints(prev => prev.map(c => c.id === id ? { ...c, ...updatedComplaint } : c));
+      if (previous?.status === 'SOLVING') {
+        setStats(s => ({ ...s, pendingComplaints: Math.max(0, s.pendingComplaints - 1) }));
+      }
+    } catch (error) {
+      alert(error.message || 'Could not update complaint');
+    }
   };
 
-  const handleReject = (id) => {
-    setComplaints(prev => prev.map(c => c.id === id ? { ...c, status: 'REJECTED' } : c));
-    setStats(s => ({ ...s, pendingComplaints: Math.max(0, s.pendingComplaints - 1) }));
-  };
+  const handleResolve = (id) => updateComplaintStatus(id, 'SOLVED');
+
+  const handleReject = (id) => updateComplaintStatus(id, 'REJECTED');
 
   const handleAddBook = (form) => {
     const newBook = { id: Date.now(), title: form.title, author: form.author, genre: form.genre, year: parseInt(form.year) || 2024, rating: 0 };

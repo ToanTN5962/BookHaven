@@ -35,6 +35,9 @@ const translations = {
 const ProfilePage = () => {
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState('bookshelf');
+  const [bookshelf, setBookshelf] = useState({ stats: { wishlist: 0, reading: 0, read: 0, drop: 0 }, reading: [], wishlist: [], read: [], drop: [] });
+  const [reviews, setReviews] = useState(null);
+  const [complaints, setComplaints] = useState(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [lang] = useState(() => localStorage.getItem('app_lang') || 'en');
@@ -65,6 +68,34 @@ const ProfilePage = () => {
 
       const data = await response.json();
       setUser(data.user);
+      // fetch bookshelf, reviews and complaints
+      try {
+        const stored = localStorage.getItem('user');
+        const parsed = stored ? JSON.parse(stored) : null;
+        const uid = parsed?.id || parsed?.sub || null;
+
+        if (uid) {
+          const bsRes = await fetch(`http://localhost:3000/api/users/getbookshelfinfo/${uid}`);
+          if (bsRes.ok) {
+            const bs = await bsRes.json();
+            setBookshelf(bs);
+          }
+        }
+
+        const revRes = await fetch('http://localhost:3000/api/review/me', { headers: { Authorization: `Bearer ${token}` } });
+        if (revRes.ok) {
+          const r = await revRes.json();
+          setReviews(r.reviews || []);
+        }
+
+        const compRes = await fetch('http://localhost:3000/api/complaints/me', { headers: { Authorization: `Bearer ${token}` } });
+        if (compRes.ok) {
+          const c = await compRes.json();
+          setComplaints(c.complaints || []);
+        }
+      } catch (e) {
+        // ignore fetch errors
+      }
     };
 
     fetchProfile();
@@ -81,12 +112,7 @@ const ProfilePage = () => {
     sex: user.sex,
     role: user.role,
     createdAt: user.createdAt,
-    stats: {
-      wishlist: 12,
-      reading: 3,
-      read: 45,
-      drop: 2
-    }
+    stats: bookshelf.stats || { wishlist: 0, reading: 0, read: 0, drop: 0 }
   };
 
   return (
@@ -179,55 +205,72 @@ const ProfilePage = () => {
           <div className="space-y-4">
             {activeTab === 'bookshelf' && (
               <div className="grid grid-cols-1 gap-4">
-                {/* Item mẫu dựa trên model UserBook */}
-                <div className="bg-white p-4 rounded-2xl border border-gray-100 flex items-center gap-4 group hover:shadow-md transition-all">
-                  <div className="w-12 h-16 bg-gray-200 rounded-lg flex-shrink-0" />
-                  <div className="flex-1">
-                    <h4 className="font-bold text-gray-800">The Radiant Dark</h4>
-                    <p className="text-xs text-gray-500">Added on Jan 20, 2024</p>
-                  </div>
-                  <span className="px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-bold rounded-full uppercase">
-                    Reading
-                  </span>
-                  <button className="p-2 text-gray-400 hover:text-indigo-600">
-                    <Edit3 size={16} />
-                  </button>
-                </div>
+                { (bookshelf.reading && bookshelf.reading.length > 0) ? (
+                  bookshelf.reading.map(b => (
+                    <div key={b.id} className="bg-white p-4 rounded-2xl border border-gray-100 flex items-center gap-4 group hover:shadow-md transition-all">
+                      <div className="w-12 h-16 bg-gray-200 rounded-lg flex-shrink-0">
+                        {b.imageUrl ? <img src={b.imageUrl} alt={b.title} className="w-full h-full object-cover rounded-lg" /> : null}
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-bold text-gray-800">{b.title}</h4>
+                        <p className="text-xs text-gray-500">Added on {b.addedAt ? new Date(b.addedAt).toLocaleDateString() : ''}</p>
+                        <p className="text-xs text-gray-400 mt-1">{b.author}</p>
+                      </div>
+                      <span className="px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-bold rounded-full uppercase">
+                        Reading
+                      </span>
+                      <button className="p-2 text-gray-400 hover:text-indigo-600">
+                        <Edit3 size={16} />
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <div className="bg-white p-6 rounded-3xl border border-gray-100 text-center text-gray-400">No items in your bookshelf.</div>
+                )}
               </div>
             )}
 
             {activeTab === 'reviews' && (
               <div className="space-y-4">
-                {/* Item mẫu dựa trên model Review */}
-                <div className="bg-white p-6 rounded-3xl border border-gray-100">
-                  <div className="flex justify-between mb-3">
-                    <h4 className="font-bold text-gray-800">Under Water</h4>
-                    <div className="flex text-yellow-400"><Star size={14} fill="currentColor" /> 4.5</div>
-                  </div>
-                  <p className="text-gray-600 text-sm italic">"A very moving story about family and secrets..."</p>
-                  <div className="mt-4 flex items-center gap-4 text-[10px] font-bold text-gray-400 uppercase">
-                    <span>24 Likes</span>
-                    <span>Updated 2 days ago</span>
-                  </div>
-                </div>
+                {reviews.length === 0 ? (
+                  <div className="bg-white p-6 rounded-3xl border border-gray-100 text-center text-gray-400">No reviews yet.</div>
+                ) : (
+                  reviews.map(r => (
+                    <div key={r.id} className="bg-white p-6 rounded-3xl border border-gray-100">
+                      <div className="flex justify-between mb-3">
+                        <h4 className="font-bold text-gray-800">{r.book?.title || 'Unknown'}</h4>
+                        <div className="flex text-yellow-400"><Star size={14} fill="currentColor" /> </div>
+                      </div>
+                      <p className="text-gray-600 text-sm italic">{r.content}</p>
+                      <div className="mt-4 flex items-center gap-4 text-[10px] font-bold text-gray-400 uppercase">
+                        <span>{r.createdAt ? new Date(r.createdAt).toLocaleDateString() : ''}</span>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             )}
 
             {activeTab === 'complaints' && (
               <div className="space-y-4">
-                {/* Item mẫu dựa trên model Complaint */}
-                <div className="bg-white p-6 rounded-3xl border border-gray-100 flex justify-between items-start">
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-[10px] font-black bg-red-50 text-red-600 px-2 py-0.5 rounded">WRONG INFO</span>
-                      <h4 className="font-bold text-gray-800">Title mismatch for Book ID #24</h4>
+                {complaints.length === 0 ? (
+                  <div className="bg-white p-6 rounded-3xl border border-gray-100 text-center text-gray-400">No complaints found.</div>
+                ) : (
+                  complaints.map(c => (
+                    <div key={c.id} className="bg-white p-6 rounded-3xl border border-gray-100 flex justify-between items-start">
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-[10px] font-black bg-red-50 text-red-600 px-2 py-0.5 rounded">{c.type}</span>
+                          <h4 className="font-bold text-gray-800">{c.description?.slice(0, 60) || 'Complaint'}</h4>
+                        </div>
+                        <p className="text-sm text-gray-500">{c.description}</p>
+                      </div>
+                      <span className="text-[10px] font-bold px-3 py-1 bg-amber-50 text-amber-600 rounded-full uppercase">
+                        {c.solvingStatus || c.status || 'SOLVING'}
+                      </span>
                     </div>
-                    <p className="text-sm text-gray-500">The author name is incorrect in the description.</p>
-                  </div>
-                  <span className="text-[10px] font-bold px-3 py-1 bg-amber-50 text-amber-600 rounded-full uppercase">
-                    Solving
-                  </span>
-                </div>
+                  ))
+                )}
               </div>
             )}
           </div>

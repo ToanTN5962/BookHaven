@@ -25,6 +25,7 @@ model User {
   review            Review[]
   books             UserBook[]
   reviewLikes       ReviewLike[]
+  notifications     Notification[]
   complaint         Complaint[]   @relation("UserComplaint")
   handledComplaint  Complaint[]   @relation("AdminHandle")
   createdAt         DateTime      @default(now())
@@ -156,6 +157,23 @@ model Complaint {
   handledBy     User?         @relation("AdminHandle", fields: [handledById], references: [id])
   handledById   Int?
   handleAt      DateTime?
+  notifications Notification[]
+}
+
+model Notification {
+  id          Int        @id @default(autoincrement())
+  user        User       @relation(fields: [userId], references: [id])
+  userId      Int
+  complaint   Complaint? @relation(fields: [complaintId], references: [id])
+  complaintId Int?
+  title       String
+  message     String     @db.Text
+  isRead      Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([userId, isRead, createdAt])
+  @@index([complaintId])
 }
 
 enum Sex {

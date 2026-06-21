@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Star, Search, Bell, User, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Star, Search, User, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import NotificationBell from '../components/NotificationBell';
 
 function useQuery() {
   return new URLSearchParams(useLocation().search);
@@ -48,10 +49,7 @@ const SearchHeader = () => {
       </div>
 
       <div className="flex items-center gap-5">
-        <button className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
-          <Bell size={22} />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-        </button>
+        <NotificationBell />
         <button 
           className="flex items-center gap-2 p-1 pr-3 hover:bg-gray-100 rounded-full transition-all border border-gray-100"
           onClick={() => navigate("/profile")}

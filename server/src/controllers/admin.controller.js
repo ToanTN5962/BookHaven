@@ -62,6 +62,86 @@ const getStatInfo = async (req, res) => {
 
 };
 
+const getComplaintNotificationText = (status) => {
+    if (status === 'SOLVED') {
+        return {
+            title: 'Your complaint has been resolved',
+            message: 'An admin has reviewed your complaint and marked it as resolved.',
+        };
+    }
+
+    return {
+        title: 'Your complaint has been rejected',
+        message: 'An admin has reviewed your complaint and marked it as rejected.',
+    };
+};
+
+const updateComplaintStatus = async (req, res) => {
+    try {
+        if (req.user.role !== 'ADMIN') {
+            return res.status(403).json({ message: "Admin permission is required" });
+        }
+
+        const id = Number(req.params.id);
+        const { status } = req.body;
+        const allowedStatuses = ['SOLVED', 'REJECTED'];
+
+        if (!id) {
+            return res.status(400).json({ message: "Complaint id is invalid" });
+        }
+
+        if (!allowedStatuses.includes(status)) {
+            return res.status(400).json({ message: "Status must be SOLVED or REJECTED" });
+        }
+
+        const complaint = await prisma.complaint.findUnique({
+            where: { id },
+            include: { user: { select: { id: true, email: true, fullName: true } } },
+        });
+
+        if (!complaint) {
+            return res.status(404).json({ message: "Complaint not found" });
+        }
+
+        const notificationText = getComplaintNotificationText(status);
+
+        const result = await prisma.$transaction(async (tx) => {
+            const updatedComplaint = await tx.complaint.update({
+                where: { id },
+                data: {
+                    solvingStatus: status,
+                    handledById: req.user.sub,
+                    handleAt: new Date(),
+                },
+                include: {
+                    user: { select: { id: true, email: true, fullName: true } },
+                    handledBy: { select: { id: true, fullName: true } },
+                },
+            });
+
+            const notification = await tx.notification.create({
+                data: {
+                    userId: complaint.userId,
+                    complaintId: complaint.id,
+                    title: notificationText.title,
+                    message: `${notificationText.message} Complaint type: ${complaint.type}.`,
+                },
+            });
+
+            return { complaint: updatedComplaint, notification };
+        });
+
+        return res.status(200).json({
+            message: "Complaint status updated",
+            complaint: result.complaint,
+            notification: result.notification,
+        });
+    } catch (error) {
+        return res.status(500).json({ message: "Internal Server Error", error: error.message });
+    }
+};
+
 module.exports = {
-    getStatInfo
+    getStatInfo,
+    updateComplaintStatus,
 }
