@@ -125,7 +125,10 @@ export default function SearchResults() {
   const [books, setBooks] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const navigate = useNavigate();
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [q]);
 
   useEffect(() => {
     if (!q) return setBooks([]), setLoading(false);
@@ -133,7 +136,7 @@ export default function SearchResults() {
     const fetchSearch = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`http://localhost:3000/api/books/search?q=${encodeURIComponent(q)}`, { signal: ac.signal });
+        const res = await fetch(`http://localhost:3000/api/books/search?q=${encodeURIComponent(q)}&page=${currentPage}`, { signal: ac.signal });
         if (!res.ok) return setBooks([]);
         const data = await res.json();
         const normalize = (b) => ({
@@ -161,7 +164,7 @@ export default function SearchResults() {
 
   useEffect(() => {
     if (currentPage > totalPages) setCurrentPage(totalPages);
-  }, [totalPages]);
+  }, [currentPage, totalPages]);
 
   const buildPagination = () => {
     const tp = Number(totalPages) || 1;

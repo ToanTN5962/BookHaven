@@ -44,6 +44,70 @@ const matchesBookCategory = (book, category) => {
     );
 };
 
+const normalizeSearchText = (value = '') =>
+    String(value)
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+const getSearchTokens = (value = '') =>
+    normalizeSearchText(value)
+        .split(' ')
+        .filter((word) => word.length >= 2);
+
+const scoreSearchBook = (book, query) => {
+    const normalizedQuery = normalizeSearchText(query);
+    const queryTokens = getSearchTokens(query);
+    if (!normalizedQuery || !queryTokens.length) return 0;
+
+    const title = normalizeSearchText(book.title);
+    const author = normalizeSearchText(book.author);
+    const description = normalizeSearchText(book.description || book.summary);
+    const categories = normalizeSearchText([...(book.categories || []), ...(book.tags || [])].join(' '));
+    const fullText = [title, author, description, categories].join(' ');
+
+    let score = 0;
+
+    if (title === normalizedQuery) score += 300;
+    if (title.startsWith(normalizedQuery)) score += 180;
+    if (title.includes(normalizedQuery)) score += 140;
+    if (author.includes(normalizedQuery)) score += 80;
+    if (description.includes(normalizedQuery)) score += 25;
+    if (categories.includes(normalizedQuery)) score += 20;
+
+    let titleMatches = 0;
+    let fullTextMatches = 0;
+
+    for (const token of queryTokens) {
+        if (title.split(' ').includes(token)) {
+            score += 70;
+            titleMatches++;
+            fullTextMatches++;
+        } else if (title.includes(token)) {
+            score += 45;
+            titleMatches++;
+            fullTextMatches++;
+        } else if (author.includes(token)) {
+            score += 30;
+            fullTextMatches++;
+        } else if (categories.includes(token)) {
+            score += 18;
+            fullTextMatches++;
+        } else if (description.includes(token)) {
+            score += 8;
+            fullTextMatches++;
+        }
+    }
+
+    if (queryTokens.length > 1 && titleMatches === queryTokens.length) score += 90;
+    if (fullTextMatches === queryTokens.length) score += 35;
+
+    return score;
+};
+
 const getRandomBooks = async (req, res) => {
     try {
         const { page = 1, sessionId, category = 'all' } = req.query;
@@ -344,6 +408,7 @@ const getRandomBooks = async (req, res) => {
 const getBookByName = async (req, res) => {
     try {
         const maxResults = 10;
+        const pageNum = Math.max(1, Number(req.query.page) || 1);
         const q = (req.query.q || req.query.name || '').trim();
         if (!q) return res.status(400).json({ message: 'Search info is missing' });
 
@@ -353,17 +418,68 @@ const getBookByName = async (req, res) => {
         let combinedBooks = [];
         let sourceUsed = [];
 
-        // 1. Gọi song song cả 2 API để tối ưu tốc độ và lấy tối đa dữ liệu
-        const apiPromises = [];
+        const fetchLocalBooks = async () => {
+            try {
+                const books = await prisma.book.findMany({
+                    include: {
+                        authors: { include: { author: true } },
+                        genres: { include: { genre: true } },
+                        rating: true,
+                    },
+                    take: 100,
+                });
+
+                const scoredLocalBooks = books
+                    .map((book) => {
+                        const ratings = book.rating || [];
+                        const averageRating = ratings.length
+                            ? ratings.reduce((sum, rating) => sum + Number(rating.star), 0) / ratings.length
+                            : null;
+
+                        return {
+                            id: book.bookIsbn || book.id,
+                            bookIsbn: book.bookIsbn || '',
+                            title: book.title || '',
+                            author: (book.authors || []).map((item) => item.author?.fullName).filter(Boolean).join(', '),
+                            description: book.description || '',
+                            publisher: book.publisher || '',
+                            publishedDate: book.publishedYear ? String(book.publishedYear) : '',
+                            book_image: book.imageUrl || null,
+                            rating: averageRating ? Number(averageRating.toFixed(1)) : null,
+                            categories: (book.genres || []).map((item) => item.genre?.name).filter(Boolean),
+                            source: 'BookHaven',
+                        };
+                    })
+                    .map((book) => ({ ...book, _score: scoreSearchBook(book, q) }))
+                    .filter((book) => book._score > 0);
+
+                if (scoredLocalBooks.length) sourceUsed.push('BookHaven');
+                return scoredLocalBooks;
+            } catch (e) {
+                console.error('Local books search error:', e.message);
+                return [];
+            }
+        };
 
         // Luồng Google Books (Tìm kiếm từ khóa rất mạnh)
         const fetchGoogleBooks = async () => {
             try {
-                const gUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=20${googleKey ? `&key=${googleKey}` : ''}`;
-                const gResp = await fetch(gUrl);
-                if (gResp.ok) {
+                const queryVariants = [
+                    q,
+                    `intitle:${q}`,
+                    q.split(/\s+/).filter(Boolean).map((word) => `intitle:${word}`).join(' '),
+                ].filter(Boolean);
+
+                const responses = await Promise.all(queryVariants.map(async (queryValue) => {
+                    const gUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(queryValue)}&maxResults=20${googleKey ? `&key=${googleKey}` : ''}`;
+                    const gResp = await fetch(gUrl);
+                    if (!gResp.ok) return [];
                     const gData = await gResp.json();
-                    const items = Array.isArray(gData.items) ? gData.items : [];
+                    return Array.isArray(gData.items) ? gData.items : [];
+                }));
+
+                const items = responses.flat();
+                if (items.length) {
                     sourceUsed.push('Google Books');
                     return items.map(item => {
                         const info = item.volumeInfo || {};
@@ -381,7 +497,9 @@ const getBookByName = async (req, res) => {
                             publishedDate: info.publishedDate || '',
                             book_image: info.imageLinks?.thumbnail || info.imageLinks?.smallThumbnail || null,
                             rating: info.averageRating || null,
-                            isbns: isbns
+                            categories: info.categories || [],
+                            isbns: isbns,
+                            source: 'Google Books',
                         };
                     });
                 }
@@ -425,15 +543,17 @@ const getBookByName = async (req, res) => {
             return [];
         };
 
-        // Chạy song song cả 2 request
-        const [googleResults, nytResults] = await Promise.all([
+        // Chạy song song các nguồn dữ liệu
+        const [localResults, googleResults, nytResults] = await Promise.all([
+            fetchLocalBooks(),
             fetchGoogleBooks(),
             fetchNytBooks()
         ]);
 
         // Gộp kết quả từ 2 nguồn (loại bỏ trùng lặp qua ISBN nếu có)
         const seenIsbns = new Set();
-        const rawCombined = [...googleResults, ...nytResults];
+        const seenTitles = new Set();
+        const rawCombined = [...localResults, ...googleResults, ...nytResults];
         
         for (const book of rawCombined) {
             if (book.bookIsbn) {
@@ -442,7 +562,11 @@ const getBookByName = async (req, res) => {
                     combinedBooks.push(book);
                 }
             } else {
-                combinedBooks.push(book); // Giữ lại nếu không có ISBN để định danh
+                const titleKey = `${normalizeSearchText(book.title)}|${normalizeSearchText(book.author)}`;
+                if (!seenTitles.has(titleKey)) {
+                    seenTitles.add(titleKey);
+                    combinedBooks.push(book);
+                }
             }
         }
 
@@ -450,48 +574,10 @@ const getBookByName = async (req, res) => {
             return res.status(200).json({ books: [], total: 0, totalPages: 0, source: 'None' });
         }
 
-        // 2. Thuật toán lọc và chấm điểm thông minh (Word/Substring Relevance Scoring)
-        const queryLower = q.toLowerCase();
-
-        const scored = combinedBooks.map(book => {
-            const titleLower = (book.title || '').toLowerCase();
-            const authorLower = (book.author || '').toLowerCase();
-            const descLower = (book.description || '').toLowerCase();
-            
-            let score = 0;
-
-            // TRƯỜNG HỢP ƯU TIÊN 1: Khớp chính xác hoàn toàn cụm từ tìm kiếm
-            if (titleLower === queryLower) {
-                score += 200; // Khớp khít tên sách -> Đẩy lên đầu tiên
-            } else if (titleLower.startsWith(queryLower)) {
-                score += 100; // Tên sách bắt đầu bằng từ khóa
-            } else if (titleLower.includes(queryLower)) {
-                score += 50;  // Tên sách có chứa từ khóa
-            }
-
-            if (authorLower.includes(queryLower)) score += 30; // Tác giả chứa từ khóa
-            if (descLower.includes(queryLower)) score += 5;    // Mô tả chứa từ khóa
-
-            // TRƯỜNG HỢP ƯU TIÊN 2: Khớp từng từ đơn lẻ (Hỗ trợ viết đảo từ hoặc thiếu từ)
-            const queryWords = queryLower.split(/\s+/).filter(w => w.length > 0);
-            let wordsMatched = 0;
-            
-            for (const word of queryWords) {
-                if (titleLower.includes(word)) {
-                    score += 15;
-                    wordsMatched++;
-                } else if (authorLower.includes(word)) {
-                    score += 10;
-                }
-            }
-
-            // Thưởng điểm nếu khớp càng nhiều từ trong cụm từ khóa
-            if (wordsMatched === queryWords.length && queryWords.length > 1) {
-                score += 40; 
-            }
-
-            return { ...book, _score: score };
-        });
+        const scored = combinedBooks.map(book => ({
+            ...book,
+            _score: Math.max(book._score || 0, scoreSearchBook(book, q)),
+        }));
 
         // Lọc bỏ các kết quả có điểm số bằng 0 (hoàn toàn không liên quan đến từ khóa)
         const filteredAndScored = scored.filter(b => b._score > 0);
@@ -499,8 +585,8 @@ const getBookByName = async (req, res) => {
         // Sắp xếp giảm dần theo điểm số mức độ liên quan
         filteredAndScored.sort((a, b) => b._score - a._score);
 
-        // Giới hạn số lượng kết quả trả về
-        const finalBooks = filteredAndScored.slice(0, maxResults).map(b => {
+        const startIndex = (pageNum - 1) * maxResults;
+        const finalBooks = filteredAndScored.slice(startIndex, startIndex + maxResults).map(b => {
             delete b._score;
             return b;
         });
