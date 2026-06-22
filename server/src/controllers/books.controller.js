@@ -423,7 +423,7 @@ const getBookByIsbn = async (req, res) => {
         if (isPureDigits && !looksLikeIsbnNumeric) {
             try {
                 const bid = Number(bookIsbn);
-                const local = await prisma.book.findUnique({ where: { id: bid }, include: { authors: { include: { author: true } } } });
+                const local = await prisma.book.findUnique({ where: { id: bid }, include: { authors: { include: { author: true } } }, rating: true });
                 if (local) {
                     console.log('Found local book by id:', bid);
                     // If local record lacks rich metadata, try to supplement from Google Books using stored ISBN
@@ -501,17 +501,58 @@ const getBookByIsbn = async (req, res) => {
             }
         }
 
-        const isbn = bookIsbn.replace(/-/g, '').trim();
+        // Normalize ISBN (remove hyphens) and try local DB first before external APIs
+        const isbn = String(bookIsbn).replace(/-/g, '').trim();
+        try {
+            const localBook = await prisma.book.findFirst({
+                where: {
+                    OR: [
+                        { bookIsbn: bookIsbn },
+                        { bookIsbn: isbn }
+                    ]
+                },
+                include: { authors: { include: { author: true } }, rating: true }
+            });
+
+            if (localBook) {
+                console.log('Found local book by ISBN:', localBook.id || localBook.bookIsbn);
+                // supplement with Google only if more metadata is desired, but return local data immediately
+                const ratings = localBook.rating || [];
+                const averageRating = ratings.length ? ratings.reduce((sum, r) => sum + Number(r.star), 0) / ratings.length : null;
+
+                return res.status(200).json({
+                    id: localBook.id,
+                    title: localBook.title || 'Unknown Title',
+                    author: (localBook.authors || []).map(a => a.author?.fullName).filter(Boolean).join(', ') || 'Unknown Author',
+                    description: localBook.description || '',
+                    rating: averageRating ? Number(averageRating.toFixed(1)) : (localBook.rating || 'N/A'),
+                    thumbnail: normalizeImageUrl(localBook.imageUrl || null),
+                    tags: [],
+                    publishedDate: localBook.publishedYear ? String(localBook.publishedYear) : '',
+                    pageCount: localBook.pageCount || null,
+                    publisher: localBook.publisher || '',
+                    language: localBook.language || '',
+                });
+            }
+        } catch (e) {
+            console.warn('Local DB lookup by ISBN failed', e && e.message ? e.message : e);
+        }
+
         console.log('Searching Google by ISBN:', isbn);
         const searchRes = await fetch(
             `https://www.googleapis.com/books/v1/volumes?q=isbn:${encodeURIComponent(isbn)}&key=${process.env.GOOGLE_BOOKS_API_KEY}`
         );
-        const searchData = await searchRes.json();
-        console.log('Google ISBN search status:', searchRes.status, 'items:', Array.isArray(searchData.items) ? searchData.items.length : 0);
-        const item = searchData.items?.[0];
-        if (item) {
-            console.log('Resolved via Google ISBN search');
-            return res.status(200).json(mapGoogleItem(item));
+        // Handle rate limits (429) gracefully
+        if (searchRes.status === 429) {
+            console.warn('Google Books API rate limited (429) for ISBN:', isbn);
+        } else {
+            const searchData = await searchRes.json();
+            console.log('Google ISBN search status:', searchRes.status, 'items:', Array.isArray(searchData.items) ? searchData.items.length : 0);
+            const item = searchData.items?.[0];
+            if (item) {
+                console.log('Resolved via Google ISBN search');
+                return res.status(200).json(mapGoogleItem(item));
+            }
         }
 
         try {
