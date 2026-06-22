@@ -118,6 +118,30 @@ const addToShelf = async (req, res) => {
 
     if (!bookId) {
       const publishedYear = book.publishedDate ? parseInt((book.publishedDate + '').slice(0,4)) || 0 : 0;
+
+      // protect against storing extremely long data URIs or unexpected large strings in imageUrl
+      let img = book.thumbnail || book.imageUrl || null;
+      if (!img || typeof img !== 'string') {
+        img = null;
+      } else {
+        try { console.debug('Incoming imageUrl type/length for book', book.title, typeof img, img.length); } catch (e) {}
+        // reject data URIs
+        if (img.startsWith('data:')) {
+          console.warn('Skipping storing imageUrl (data URI) for book:', book.title);
+          img = null;
+        } else {
+          // accept only http(s) URLs and only if <=255 chars
+          const isHttp = img.startsWith('http://') || img.startsWith('https://');
+          if (!isHttp) {
+            console.warn('Skipping storing imageUrl (not http/https) for book:', book.title);
+            img = null;
+          } else if (img.length > 191) {
+            console.warn('Skipping storing imageUrl (too long for DB column) for book:', book.title, 'len=', img.length);
+            img = null;
+          }
+        }
+      }
+
       const created = await prisma.book.create({
         data: {
           title: book.title || 'Untitled',
@@ -125,7 +149,7 @@ const addToShelf = async (req, res) => {
           publisher: book.publisher || '',
           description: book.description || '',
           language: book.language || 'en',
-          imageUrl: book.thumbnail || book.imageUrl || null,
+          imageUrl: img,
         }
       });
       bookId = created.id;
