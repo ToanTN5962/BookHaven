@@ -20,6 +20,22 @@ const createSeededRandom = (seed) => {
     };
 };
 
+const normalizeImageUrl = (url) => {
+    if (!url) return null;
+    try {
+        // trim
+        let u = String(url).trim();
+        if (!u) return null;
+        // protocol-relative -> https
+        if (u.startsWith('//')) u = 'https:' + u;
+        // force https where possible
+        if (u.startsWith('http://')) u = u.replace('http://', 'https://');
+        return u;
+    } catch (e) {
+        return null;
+    }
+};
+
 const bookCategoryKeywords = {
     technology: ['technology', 'computer', 'software', 'programming', 'coding', 'data', 'ai', 'artificial intelligence', 'internet', 'digital', 'startup'],
     science: ['science', 'scientific', 'physics', 'biology', 'chemistry', 'space', 'nature', 'climate', 'medicine', 'health'],
@@ -179,7 +195,7 @@ const getRandomBooks = async (req, res) => {
             author: book.author || 'Unknown Author',
             summary: book.description || book.contributor || 'No description available.',
             rating: 'N/A',
-            thumbnail: book.book_image || null,
+            thumbnail: normalizeImageUrl(book.book_image || null),
             tags: [book.list_name].filter(Boolean),
         }));
 
@@ -232,7 +248,7 @@ const getBookByName = async (req, res) => {
                             description: book.description || '',
                             publisher: book.publisher || '',
                             publishedDate: book.publishedYear ? String(book.publishedYear) : '',
-                            book_image: book.imageUrl || null,
+                            book_image: normalizeImageUrl(book.imageUrl || null),
                             rating: averageRating ? Number(averageRating.toFixed(1)) : null,
                             categories: (book.genres || []).map((item) => item.genre?.name).filter(Boolean),
                             source: 'BookHaven',
@@ -283,7 +299,7 @@ const getBookByName = async (req, res) => {
                             description: info.description || info.subtitle || 'No description available.',
                             publisher: info.publisher || '',
                             publishedDate: info.publishedDate || '',
-                            book_image: info.imageLinks?.thumbnail || info.imageLinks?.smallThumbnail || null,
+                            book_image: normalizeImageUrl(info.imageLinks?.thumbnail || info.imageLinks?.smallThumbnail || null),
                             rating: info.averageRating || null,
                             categories: info.categories || [],
                             isbns: isbns,
@@ -319,7 +335,7 @@ const getBookByName = async (req, res) => {
                             description: r.description || r.notes || '',
                             publisher: r.publisher || '',
                             publishedDate: r.published_date || null,
-                            book_image: isbn ? `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg` : null,
+                            book_image: normalizeImageUrl(isbn ? `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg` : null),
                             rating: null,
                             isbns: r.isbns || []
                         };
@@ -396,7 +412,60 @@ const getBookByName = async (req, res) => {
 const getBookByIsbn = async (req, res) => {
     try {
         const { bookIsbn } = req.params;
+        console.log('getBookByIsbn called with:', bookIsbn);
         const isIsbnLike = /^[0-9Xx-]+$/.test(bookIsbn);
+
+        // Distinguish between internal numeric IDs and numeric ISBNs (ISBN-10 or ISBN-13)
+        const isPureDigits = /^\d+$/.test(bookIsbn);
+        const looksLikeIsbnNumeric = isPureDigits && (bookIsbn.length === 10 || bookIsbn.length === 13);
+
+        // If the param looks like a pure integer ID (not an ISBN-10/13), try to load from local DB first
+        if (isPureDigits && !looksLikeIsbnNumeric) {
+            try {
+                const bid = Number(bookIsbn);
+                const local = await prisma.book.findUnique({ where: { id: bid }, include: { authors: { include: { author: true } } } });
+                if (local) {
+                    console.log('Found local book by id:', bid);
+                    // If local record lacks rich metadata, try to supplement from Google Books using stored ISBN
+                    let supplemental = {};
+                    try {
+                        const isbn = local.bookIsbn || null;
+                        if (( !local.description || !local.imageUrl ) && isbn) {
+                            const gRes = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${encodeURIComponent(isbn)}&key=${process.env.GOOGLE_BOOKS_API_KEY}`);
+                            if (gRes.ok) {
+                                const gData = await gRes.json();
+                                const gItem = gData.items?.[0];
+                                const info = gItem?.volumeInfo || {};
+                                supplemental.description = info.description || info.subtitle || '';
+                                supplemental.thumbnail = normalizeImageUrl(info.imageLinks?.thumbnail || info.imageLinks?.smallThumbnail || null);
+                                supplemental.publishedDate = info.publishedDate || '';
+                                supplemental.pageCount = info.pageCount || null;
+                                supplemental.publisher = info.publisher || '';
+                                supplemental.language = info.language || '';
+                            }
+                        }
+                    } catch (e) {
+                        // ignore supplemental failures
+                    }
+
+                    return res.status(200).json({
+                        id: local.id,
+                        title: local.title,
+                        author: (local.authors || []).map(a => a.author.fullName).join(', '),
+                        description: local.description || supplemental.description || '',
+                        rating: local.rating || 'N/A',
+                        thumbnail: normalizeImageUrl(local.imageUrl || supplemental.thumbnail || null),
+                        tags: [],
+                        publishedDate: local.publishedYear ? String(local.publishedYear) : (supplemental.publishedDate || ''),
+                        pageCount: local.pageCount || supplemental.pageCount || null,
+                        publisher: local.publisher || supplemental.publisher || '',
+                        language: local.language || supplemental.language || '',
+                    });
+                }
+            } catch (e) {
+                console.warn('Local DB lookup failed for book id', bookIsbn, e && e.message ? e.message : e);
+            }
+        }
         const mapGoogleItem = (item) => {
             const info = item.volumeInfo || {};
             return {
@@ -405,7 +474,7 @@ const getBookByIsbn = async (req, res) => {
                 author:        info.authors?.join(', ') || 'Unknown Author',
                 description:   info.description || info.subtitle || '',
                 rating:        info.averageRating || 'N/A',
-                thumbnail:     info.imageLinks?.thumbnail || info.imageLinks?.smallThumbnail || null,
+                thumbnail:     normalizeImageUrl(info.imageLinks?.thumbnail || info.imageLinks?.smallThumbnail || null),
                 tags:          info.categories || [],
                 publishedDate: info.publishedDate || '',
                 pageCount:     info.pageCount || null,
@@ -414,27 +483,34 @@ const getBookByIsbn = async (req, res) => {
             };
         };
 
+        console.log('isIsbnLike:', isIsbnLike, 'isPureDigits:', isPureDigits, 'looksLikeIsbnNumeric:', looksLikeIsbnNumeric);
         if (!isIsbnLike) {
             try {
                 const response = await fetch(
                     `https://www.googleapis.com/books/v1/volumes/${encodeURIComponent(bookIsbn)}?key=${process.env.GOOGLE_BOOKS_API_KEY}`
                 );
                 const data = await response.json();
+                console.log('Google volume fetch status:', response.status, 'items:', Array.isArray(data.items) ? data.items.length : (data.id ? 1 : 0));
                 if (data && !data.error && (data.id || data.volumeInfo)) {
+                    console.log('Resolved via Google volume id');
                     return res.status(200).json(mapGoogleItem(data));
                 }
             } catch (err) {
+                console.warn('Google volume fetch failed', err && err.message ? err.message : err);
 
             }
         }
 
         const isbn = bookIsbn.replace(/-/g, '').trim();
+        console.log('Searching Google by ISBN:', isbn);
         const searchRes = await fetch(
             `https://www.googleapis.com/books/v1/volumes?q=isbn:${encodeURIComponent(isbn)}&key=${process.env.GOOGLE_BOOKS_API_KEY}`
         );
         const searchData = await searchRes.json();
+        console.log('Google ISBN search status:', searchRes.status, 'items:', Array.isArray(searchData.items) ? searchData.items.length : 0);
         const item = searchData.items?.[0];
         if (item) {
+            console.log('Resolved via Google ISBN search');
             return res.status(200).json(mapGoogleItem(item));
         }
 
@@ -462,6 +538,7 @@ const getBookByIsbn = async (req, res) => {
             }
         } catch (nytErr) { }
 
+        console.log('No match found for ISBN/ID:', bookIsbn);
         return res.status(404).json({ message: 'Book not found' });
     }
     catch(error){
@@ -523,7 +600,7 @@ const getTopRated = async(req, res) => {
                 genre: matchedList.list_name,
                 title: book.title,
                 author: book.author,
-                cover: book.book_image,
+                cover: normalizeImageUrl(book.book_image),
                 isbn13: book.primary_isbn13,
                 rating: googleBook?.averageRating,
                 ratingsCount: googleBook?.ratingsCount,
@@ -555,7 +632,7 @@ const getTopRated = async(req, res) => {
                     genre,
                     title: book.title,
                     author: book.author,
-                    cover: book.book_image,
+                    cover: normalizeImageUrl(book.book_image),
                     isbn13: book.primary_isbn13,
                     rating: googleBook?.averageRating,
                     ratingsCount: googleBook?.ratingsCount,

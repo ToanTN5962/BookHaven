@@ -242,7 +242,7 @@ const ProfilePage = () => {
                   const display = all.slice(0, 10);
 
                   return display.map(b => (
-                    <div key={`${b.id}-${b._status}`} className="bg-white p-4 rounded-2xl border border-gray-100 flex items-center gap-4 group hover:shadow-md transition-all">
+                    <div key={`${b.id}-${b._status}`} onClick={() => navigate(`/books/${b.id}`)} className="bg-white p-4 rounded-2xl border border-gray-100 flex items-center gap-4 group hover:shadow-md transition-all cursor-pointer">
                       <div className="w-12 h-16 bg-gray-200 rounded-lg flex-shrink-0">
                         {b.imageUrl ? <img src={b.imageUrl} alt={b.title} className="w-full h-full object-cover rounded-lg" /> : null}
                       </div>
@@ -252,7 +252,7 @@ const ProfilePage = () => {
                         <p className="text-xs text-gray-400 mt-1">{b.author}</p>
                       </div>
                       {getStatusBadge(b._status)}
-                      <button className="p-2 text-gray-400 hover:text-indigo-600">
+                      <button onClick={(e) => { e.stopPropagation(); }} className="p-2 text-gray-400 hover:text-indigo-600">
                         <Edit3 size={16} />
                       </button>
                     </div>

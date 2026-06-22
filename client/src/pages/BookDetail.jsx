@@ -285,8 +285,40 @@ const WriteReview = ({ onSubmit, lang }) => {
 // Reviews Section
 // ---------------------------------------------------------------------------
 const ReviewsSection = ({ bookIsbn, bookId, book, lang }) => {
-  const [reviews, setReviews] = useState(MOCK_REVIEWS);
+  const [reviews, setReviews] = useState([]);
   const t = translations[lang];
+
+  useEffect(() => {
+    const fetchReviews = async () => {
+      try {
+        const token = localStorage.getItem('token');
+
+        // Prefer a real ISBN when available. Only send numeric bookId.
+        let q = '';
+        const isbnFromBook = book && (book.bookIsbn || book.isbn13 || book.isbn);
+        if (isbnFromBook) {
+          q = `bookIsbn=${encodeURIComponent(isbnFromBook)}`;
+        } else if (bookIsbn && /^\d{9,13}$/.test(String(bookIsbn))) {
+          q = `bookIsbn=${encodeURIComponent(bookIsbn)}`;
+        } else if (typeof bookId === 'number') {
+          q = `bookId=${encodeURIComponent(bookId)}`;
+        } else {
+          // Fallback: try bookIsbn param if present, otherwise avoid sending an invalid bookId
+          q = `bookIsbn=${encodeURIComponent(bookIsbn || '')}`;
+        }
+
+        const res = await fetch(`http://localhost:3000/api/review?${q}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        setReviews(data.reviews || []);
+      } catch (err) {
+        console.error('Failed to load reviews', err);
+      }
+    };
+    fetchReviews();
+  }, [bookId, bookIsbn, book]);
 
   const handleLike = (reviewId) => {
     setReviews(prev => prev.map(r =>
@@ -328,22 +360,44 @@ const ReviewsSection = ({ bookIsbn, bookId, book, lang }) => {
       payload.description = book.description || undefined;
     }
 
-    await fetch('http://localhost:3000/api/review', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify(payload),
-    });
-
-    const newReview = {
-      id: Date.now(),
-      user: { name: lang === 'vi' ? 'Bạn' : 'You' },
-      rating,
-      content,
-      likes: 0,
-      liked: false,
-      createdAt: lang === 'vi' ? 'Vừa xong' : 'Just now',
-    };
-    setReviews(prev => [newReview, ...prev]);
+    try {
+      const res = await fetch('http://localhost:3000/api/review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        // Handle expired JWT specifically
+        if (res.status === 403 && data && (data.error || '').toLowerCase().includes('expired')) {
+          localStorage.removeItem('token');
+          alert(lang === 'vi' ? 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.' : 'Session expired. Please log in again.');
+          navigate('/login');
+          return;
+        }
+        // Handle duplicate review
+        if (res.status === 409) {
+          alert(lang === 'vi' ? 'Bạn đã đánh giá cuốn sách này rồi.' : 'You have already reviewed this book.');
+          return;
+        }
+        console.error('Failed to post review', data);
+        alert((data && data.message) || 'Failed to post review');
+        return;
+      }
+      const created = data.review;
+      const mapped = {
+        id: created.id,
+        user: { name: created.user?.fullName || created.user?.username || (lang === 'vi' ? 'Bạn' : 'You') },
+        rating: rating,
+        content: created.content,
+        likes: 0,
+        liked: false,
+        createdAt: lang === 'vi' ? 'Vừa xong' : 'Just now',
+      };
+      setReviews(prev => [mapped, ...prev]);
+    } catch (err) {
+      console.error('Error posting review', err);
+    }
   };
 
   const avg = reviews.length
@@ -453,8 +507,13 @@ export default function BookDetail() {
       setLoading(true);
       try {
         const res  = await fetch(`http://localhost:3000/api/books/${bookIsbn}`);
-        const data = await res.json();
-        setBook(data);
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data) {
+          console.error('Failed to load book detail', res.status, data);
+          setBook(null);
+        } else {
+          setBook(data);
+        }
       } catch (err) {
         console.error('Failed to fetch book:', err);
       } finally {
