@@ -34,7 +34,14 @@ const translations = {
       technology: "Technology",
       science: "Science",
       literature: "Literature",
-      business: "Business"
+      business: "Business",
+      fantasy: "Fantasy",
+      romance: "Romance",
+      mystery: "Mystery",
+      history: "History",
+      selfHelp: "Self Help",
+      youngAdult: "Young Adult",
+      children: "Children"
     }
   },
   vi: {
@@ -62,7 +69,14 @@ const translations = {
       technology: "Công nghệ",
       science: "Khoa học",
       literature: "Văn học",
-      business: "Kinh doanh"
+      business: "Kinh doanh",
+      fantasy: "Kỳ ảo",
+      romance: "Lãng mạn",
+      mystery: "Bí ẩn",
+      history: "Lịch sử",
+      selfHelp: "Tự lực",
+      youngAdult: "Thanh thiếu niên",
+      children: "Thiếu nhi"
     }
   }
 };
@@ -74,6 +88,13 @@ const bookFilterOptions = [
   { value: 'science', labelKey: 'science' },
   { value: 'literature', labelKey: 'literature' },
   { value: 'business', labelKey: 'business' },
+  { value: 'fantasy', labelKey: 'fantasy' },
+  { value: 'romance', labelKey: 'romance' },
+  { value: 'mystery', labelKey: 'mystery' },
+  { value: 'history', labelKey: 'history' },
+  { value: 'self-help', labelKey: 'selfHelp' },
+  { value: 'young-adult', labelKey: 'youngAdult' },
+  { value: 'children', labelKey: 'children' },
 ];
 
 // 2. Header nhận lang và setLang để xử lý nút gạt ngôn ngữ
@@ -213,7 +234,7 @@ const SidebarBookshelf = ({ lang }) => {
           </div>
         )}
 
-        <div className="mt-8">
+        {/* <div className="mt-8">
           <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">
             {t.recentlyAdded}
           </p>
@@ -250,7 +271,7 @@ const SidebarBookshelf = ({ lang }) => {
               </>
             )}
           </div>
-        </div>
+        </div> */}
       </div>
     </aside>
   );
@@ -329,6 +350,32 @@ export default function AfterLoginPage() {
     const fetchBooks = async () => {
       setLoading(true);
       try {
+        // If a specific topic is selected (not 'all' or 'hot'), call top-rate API for that genre
+        if (selectedFilter && selectedFilter !== 'all' && selectedFilter !== 'hot') {
+          const genre = encodeURIComponent(selectedFilter);
+          const response = await fetch(`http://localhost:3000/api/books/toprate?genre=${genre}`, { signal: ac.signal });
+          if (!response.ok) {
+            setBooks([]);
+            setTotalPages(1);
+            return;
+          }
+          const data = await response.json();
+          // top-rate returns an array of details; map into the same shape DetailedBookCard expects
+          const mapped = (Array.isArray(data) ? data : []).map(item => ({
+            id: item.isbn13 || item.isbn || item.title,
+            title: item.title,
+            author: item.author,
+            thumbnail: item.cover || item.book_image || null,
+            summary: item.description || '',
+            rating: item.rating || 'N/A',
+            tags: item.categories || (item.genre ? [item.genre] : []),
+          }));
+          setBooks(mapped);
+          setTotalPages(1);
+          return;
+        }
+
+        // Default: use seeded random endpoint which can accept a category for broader filtering
         const sessionId = encodeURIComponent(getHotBooksSessionId());
         const filter = encodeURIComponent(selectedFilter);
         const response = await fetch(`http://localhost:3000/api/books/random?page=${currentPage}&sessionId=${sessionId}&category=${filter}`, { signal: ac.signal });

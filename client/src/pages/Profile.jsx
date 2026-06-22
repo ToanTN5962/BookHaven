@@ -232,6 +232,13 @@ const ProfilePage = () => {
 
                   if (all.length === 0) return (<div className="bg-white p-6 rounded-3xl border border-gray-100 text-center text-gray-400">No items in your bookshelf.</div>);
 
+                  // sort newest -> oldest based on addedAt (createdAt from server)
+                  all.sort((a, b) => {
+                    const ta = a.addedAt ? new Date(a.addedAt).getTime() : 0;
+                    const tb = b.addedAt ? new Date(b.addedAt).getTime() : 0;
+                    return tb - ta;
+                  });
+
                   const display = all.slice(0, 10);
 
                   return display.map(b => (

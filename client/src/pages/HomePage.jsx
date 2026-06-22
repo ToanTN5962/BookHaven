@@ -179,9 +179,22 @@ const BookCard = ({ id, title, author, rating, cover, onAddToWishlist, onHoverSt
   const navigate = useNavigate();
   const t = translations[lang];
 
+  const handleCardClick = () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (token && id) {
+        navigate(`/books/${id}`);
+      } else {
+        navigate('/login');
+      }
+    } catch (err) {
+      navigate('/login');
+    }
+  };
+
   return (
     <div onMouseEnter={onHoverStart} onMouseLeave={onHoverEnd} className="group p-4 rounded-2xl transition-all duration-300 hover:bg-white hover:shadow-2xl hover:scale-105 cursor-pointer">
-      <div onClick={() => id && navigate(`/books/${id}`)} className="relative aspect-[2/3] mb-4 overflow-hidden rounded-lg shadow-md"> 
+      <div onClick={handleCardClick} className="relative aspect-[2/3] mb-4 overflow-hidden rounded-lg shadow-md"> 
         {!imgLoaded && <div className="absolute inset-0 bg-gray-200 animate-pulse" />}
         <img 
           src={cover} 
@@ -257,7 +270,7 @@ const Highlights = ({ books, onAddToWishlist, lang }) => {
           {visibleBooks.map((book, idx) => (
             <BookCard
               key={currentIndex + idx}
-              id={book.id || book.bookIsbn}
+              id={book.id || book.isbn13 || book.bookIsbn}
               title={book.title}
               author={book.author}
               rating={book.rating}
