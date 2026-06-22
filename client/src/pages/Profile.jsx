@@ -115,6 +115,23 @@ const ProfilePage = () => {
     stats: bookshelf.stats || { wishlist: 0, reading: 0, read: 0, drop: 0 }
   };
 
+  const getStatusBadge = (status) => {
+    const s = (status || '').toLowerCase();
+    if (s === 'reading') return <span className="px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-bold rounded-full uppercase">Reading</span>;
+    if (s === 'wishlist' || s === 'want') return <span className="px-3 py-1 bg-purple-50 text-purple-600 text-[10px] font-bold rounded-full uppercase">Wishlist</span>;
+    if (s === 'read' || s === 'completed') return <span className="px-3 py-1 bg-green-50 text-green-600 text-[10px] font-bold rounded-full uppercase">Read</span>;
+    if (s === 'drop' || s === 'dropped') return <span className="px-3 py-1 bg-red-50 text-red-600 text-[10px] font-bold rounded-full uppercase">Dropped</span>;
+    return <span className="px-3 py-1 bg-gray-50 text-gray-600 text-[10px] font-bold rounded-full uppercase">Unknown</span>;
+  };
+
+  const getComplaintBadge = (status) => {
+    const s = (status || '').toLowerCase();
+    if (s === 'solved' || s === 'resolved') return <span className="text-[10px] font-bold px-3 py-1 bg-green-50 text-green-600 rounded-full uppercase">Solved</span>;
+    if (s === 'rejected') return <span className="text-[10px] font-bold px-3 py-1 bg-red-50 text-red-600 rounded-full uppercase">Rejected</span>;
+    // default: solving / in-progress
+    return <span className="text-[10px] font-bold px-3 py-1 bg-amber-50 text-amber-600 rounded-full uppercase">Solving</span>;
+  };
+
   return (
     <div className="min-h-screen bg-[#fafafa] py-10 px-4 md:px-8">
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row gap-8">
@@ -205,9 +222,20 @@ const ProfilePage = () => {
           <div className="space-y-4">
             {activeTab === 'bookshelf' && (
               <div className="grid grid-cols-1 gap-4">
-                { (bookshelf.reading && bookshelf.reading.length > 0) ? (
-                  bookshelf.reading.map(b => (
-                    <div key={b.id} className="bg-white p-4 rounded-2xl border border-gray-100 flex items-center gap-4 group hover:shadow-md transition-all">
+                {(() => {
+                  const all = [
+                    ...(bookshelf.reading || []).map(b => ({ ...b, _status: 'reading' })),
+                    ...(bookshelf.wishlist || []).map(b => ({ ...b, _status: 'wishlist' })),
+                    ...(bookshelf.read || []).map(b => ({ ...b, _status: 'read' })),
+                    ...(bookshelf.drop || []).map(b => ({ ...b, _status: 'drop' }))
+                  ];
+
+                  if (all.length === 0) return (<div className="bg-white p-6 rounded-3xl border border-gray-100 text-center text-gray-400">No items in your bookshelf.</div>);
+
+                  const display = all.slice(0, 10);
+
+                  return display.map(b => (
+                    <div key={`${b.id}-${b._status}`} className="bg-white p-4 rounded-2xl border border-gray-100 flex items-center gap-4 group hover:shadow-md transition-all">
                       <div className="w-12 h-16 bg-gray-200 rounded-lg flex-shrink-0">
                         {b.imageUrl ? <img src={b.imageUrl} alt={b.title} className="w-full h-full object-cover rounded-lg" /> : null}
                       </div>
@@ -216,26 +244,22 @@ const ProfilePage = () => {
                         <p className="text-xs text-gray-500">Added on {b.addedAt ? new Date(b.addedAt).toLocaleDateString() : ''}</p>
                         <p className="text-xs text-gray-400 mt-1">{b.author}</p>
                       </div>
-                      <span className="px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-bold rounded-full uppercase">
-                        Reading
-                      </span>
+                      {getStatusBadge(b._status)}
                       <button className="p-2 text-gray-400 hover:text-indigo-600">
                         <Edit3 size={16} />
                       </button>
                     </div>
-                  ))
-                ) : (
-                  <div className="bg-white p-6 rounded-3xl border border-gray-100 text-center text-gray-400">No items in your bookshelf.</div>
-                )}
+                  ));
+                })()}
               </div>
             )}
 
             {activeTab === 'reviews' && (
               <div className="space-y-4">
-                {reviews.length === 0 ? (
+                {(reviews || []).length === 0 ? (
                   <div className="bg-white p-6 rounded-3xl border border-gray-100 text-center text-gray-400">No reviews yet.</div>
                 ) : (
-                  reviews.map(r => (
+                  (reviews || []).map(r => (
                     <div key={r.id} className="bg-white p-6 rounded-3xl border border-gray-100">
                       <div className="flex justify-between mb-3">
                         <h4 className="font-bold text-gray-800">{r.book?.title || 'Unknown'}</h4>
@@ -253,10 +277,10 @@ const ProfilePage = () => {
 
             {activeTab === 'complaints' && (
               <div className="space-y-4">
-                {complaints.length === 0 ? (
+                {(complaints || []).length === 0 ? (
                   <div className="bg-white p-6 rounded-3xl border border-gray-100 text-center text-gray-400">No complaints found.</div>
                 ) : (
-                  complaints.map(c => (
+                  (complaints || []).map(c => (
                     <div key={c.id} className="bg-white p-6 rounded-3xl border border-gray-100 flex justify-between items-start">
                       <div>
                         <div className="flex items-center gap-2 mb-2">
@@ -265,9 +289,7 @@ const ProfilePage = () => {
                         </div>
                         <p className="text-sm text-gray-500">{c.description}</p>
                       </div>
-                      <span className="text-[10px] font-bold px-3 py-1 bg-amber-50 text-amber-600 rounded-full uppercase">
-                        {c.solvingStatus || c.status || 'SOLVING'}
-                      </span>
+                      {getComplaintBadge(c.solvingStatus || c.status)}
                     </div>
                   ))
                 )}
