@@ -219,6 +219,18 @@ const getBookByName = async (req, res) => {
         const nytKey = process.env.NYT_API_KEY;
         const googleKey = process.env.GOOGLE_BOOKS_API_KEY;
 
+        // Try Redis cache for search results to reduce external API calls
+        const searchCacheKey = `search:books:${normalizeSearchText(q)}:page:${pageNum}`;
+        try {
+            const cached = await redisClient.get(searchCacheKey);
+            if (cached) {
+                console.log('Search cache hit for', searchCacheKey);
+                return res.status(200).json(JSON.parse(cached));
+            }
+        } catch (e) {
+            console.warn('Redis GET error for search cache', e && e.message ? e.message : e);
+        }
+
         let combinedBooks = [];
         let sourceUsed = [];
 
@@ -397,12 +409,21 @@ const getBookByName = async (req, res) => {
 
         const totalPages = Math.max(1, Math.ceil(filteredAndScored.length / maxResults));
 
-        return res.status(200).json({
+        const responsePayload = {
             books: finalBooks,
             total: filteredAndScored.length,
             totalPages,
             source: sourceUsed.join(' + ')
-        });
+        };
+
+        // Cache search results for a short time
+        try {
+            await redisClient.setEx(searchCacheKey, 300, JSON.stringify(responsePayload));
+        } catch (e) {
+            console.warn('Redis SET error for search cache', e && e.message ? e.message : e);
+        }
+
+        return res.status(200).json(responsePayload);
 
     } catch (error) {
         return res.status(500).json({ message: 'Server error', error: error.message });
@@ -413,6 +434,17 @@ const getBookByIsbn = async (req, res) => {
     try {
         const { bookIsbn } = req.params;
         console.log('getBookByIsbn called with:', bookIsbn);
+        const bookCacheKey = `book:detail:${String(bookIsbn || '').replace(/-/g, '').trim()}`;
+        try {
+            const cached = await redisClient.get(bookCacheKey);
+            if (cached) {
+                console.log('Book detail cache hit for', bookCacheKey);
+                return res.status(200).json(JSON.parse(cached));
+            }
+        } catch (e) {
+            console.warn('Redis GET error for book detail', e && e.message ? e.message : e);
+        }
+
         const isIsbnLike = /^[0-9Xx-]+$/.test(bookIsbn);
 
         // Distinguish between internal numeric IDs and numeric ISBNs (ISBN-10 or ISBN-13)
@@ -493,7 +525,9 @@ const getBookByIsbn = async (req, res) => {
                 console.log('Google volume fetch status:', response.status, 'items:', Array.isArray(data.items) ? data.items.length : (data.id ? 1 : 0));
                 if (data && !data.error && (data.id || data.volumeInfo)) {
                     console.log('Resolved via Google volume id');
-                    return res.status(200).json(mapGoogleItem(data));
+                    const out = mapGoogleItem(data);
+                    try { await redisClient.setEx(bookCacheKey, 86400, JSON.stringify(out)); } catch (e) { /* noop */ }
+                    return res.status(200).json(out);
                 }
             } catch (err) {
                 console.warn('Google volume fetch failed', err && err.message ? err.message : err);
@@ -520,7 +554,7 @@ const getBookByIsbn = async (req, res) => {
                 const ratings = localBook.rating || [];
                 const averageRating = ratings.length ? ratings.reduce((sum, r) => sum + Number(r.star), 0) / ratings.length : null;
 
-                return res.status(200).json({
+                const out = {
                     id: localBook.id,
                     title: localBook.title || 'Unknown Title',
                     author: (localBook.authors || []).map(a => a.author?.fullName).filter(Boolean).join(', ') || 'Unknown Author',
@@ -532,7 +566,9 @@ const getBookByIsbn = async (req, res) => {
                     pageCount: localBook.pageCount || null,
                     publisher: localBook.publisher || '',
                     language: localBook.language || '',
-                });
+                };
+                try { await redisClient.setEx(bookCacheKey, 86400, JSON.stringify(out)); } catch (e) { /* noop */ }
+                return res.status(200).json(out);
             }
         } catch (e) {
             console.warn('Local DB lookup by ISBN failed', e && e.message ? e.message : e);
@@ -551,7 +587,9 @@ const getBookByIsbn = async (req, res) => {
             const item = searchData.items?.[0];
             if (item) {
                 console.log('Resolved via Google ISBN search');
-                return res.status(200).json(mapGoogleItem(item));
+                const out = mapGoogleItem(item);
+                try { await redisClient.setEx(bookCacheKey, 86400, JSON.stringify(out)); } catch (e) { /* noop */ }
+                return res.status(200).json(out);
             }
         }
 
@@ -563,7 +601,7 @@ const getBookByIsbn = async (req, res) => {
             const match = nytData.results?.[0];
 
             if (match) {
-                return res.status(200).json({
+                const out = {
                     id:            match.primary_isbn13 || match.primary_isbn10 || match.title,
                     title:         match.title || 'Unknown Title',
                     author:        match.author || 'Unknown Author',
@@ -575,7 +613,9 @@ const getBookByIsbn = async (req, res) => {
                     pageCount:     null,
                     publisher:     match.publisher || '',
                     language:      '',
-                });
+                };
+                try { await redisClient.setEx(bookCacheKey, 86400, JSON.stringify(out)); } catch (e) { /* noop */ }
+                return res.status(200).json(out);
             }
         } catch (nytErr) { }
 
