@@ -30,6 +30,8 @@ model User {
   handledComplaint  Complaint[]   @relation("AdminHandle")
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
+  streak            UserStreak?
+  yearlyChallenges  YearlyChallenge[]
 }
 
 model Book {
@@ -174,6 +176,44 @@ model Notification {
 
   @@index([userId, isRead, createdAt])
   @@index([complaintId])
+}
+
+model UserStreak {
+  id             Int       @id @default(autoincrement())
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         Int       @unique 
+  currentStreak  Int       @default(0)  
+  longestStreak  Int       @default(0)  
+  lastActiveDate DateTime? 
+  todaySecondsSpent Int    @default(0)  
+  updatedAt      DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model YearlyChallenge {
+  id              Int                    @id @default(autoincrement())
+  user            User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          Int
+  year            Int      
+  isCompleted     Boolean                @default(false)
+  createdAt       DateTime               @default(now())
+  monthlyProgress MonthlyProgress[]
+
+  @@unique([userId, year])
+}
+
+model MonthlyProgress {
+  id                Int             @id @default(autoincrement())
+  challenge         YearlyChallenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  challengeId       Int
+  month             Int      
+  hasReadBook       Boolean         @default(false) 
+  hasValidReview    Boolean         @default(false)
+  isMonthPassed     Boolean         @default(false)
+  updatedAt         DateTime        @updatedAt
+
+  @@unique([challengeId, month]) 
 }
 
 enum Sex {
