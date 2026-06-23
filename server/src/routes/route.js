@@ -6,6 +6,7 @@ function route(app){
     app.use("/api/admin", require("./admin.route"));
     app.use("/api/review", require("./review.route"));
     app.use("/api/notifications", require("./notification.route"));
+    app.use("/api/gamification", require("./gamification.route"));
 }
 
 module.exports = route;
