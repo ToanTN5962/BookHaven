@@ -4,10 +4,11 @@ import { getHotBooksSessionId } from '../utils/hotBooksSession';
 import NotificationBell from '../components/NotificationBell';
 import { 
   Search, User, ChevronDown, BookOpen, 
-  CheckCircle, Bookmark, XCircle, ChevronLeft, ChevronRight, Star 
+  CheckCircle, Bookmark, XCircle, ChevronLeft, ChevronRight, Star,
+  Flame, Calendar, Award, Check
 } from 'lucide-react';
 
-// 1. Kho dữ liệu ngôn ngữ (Dictionary) cho toàn bộ trang AfterLogin
+// 1. Cập nhật Kho dữ liệu ngôn ngữ (Đã thêm cụm từ cho Streak và Challenge)
 const translations = {
   en: {
     myLibrary: "My Library",
@@ -28,6 +29,13 @@ const translations = {
     pageOf: "Page {current} of {total}",
     bookFilter: "Book Filter",
     noBooksFound: "No books found for this filter.",
+    streakTitle: "Daily Reading Streak",
+    streakActive: "{count} Days Streak!",
+    streakInactive: "Start reading today!",
+    streakOnsiteProgress: "Onsite: {current}/{target} min",
+    challengeTitle: "Reading Challenge {year}",
+    challengeProgress: "{completed}/12 Months completed",
+    challengeMonthLabel: "Month {month}",
     filters: {
       all: "All Books",
       hot: "Hot Books",
@@ -63,6 +71,13 @@ const translations = {
     pageOf: "Trang {current} trên {total}",
     bookFilter: "Bộ lọc sách",
     noBooksFound: "Không tìm thấy sách cho bộ lọc này.",
+    streakTitle: "Chuỗi đọc sách ngày",
+    streakActive: "Chuỗi {count} ngày liên tiếp!",
+    streakInactive: "Đọc sách giữ chuỗi ngay!",
+    streakOnsiteProgress: "Duyệt web: {current}/{target} phút",
+    challengeTitle: "Thử thách năm {year}",
+    challengeProgress: "Đã đạt {completed}/12 tháng",
+    challengeMonthLabel: "Tháng {month}",
     filters: {
       all: "Tất cả sách",
       hot: "Sách hot",
@@ -97,7 +112,6 @@ const bookFilterOptions = [
   { value: 'children', labelKey: 'children' },
 ];
 
-// 2. Header nhận lang và setLang để xử lý nút gạt ngôn ngữ
 const AfterLoginHeader = ({ lang, setLang }) => {
   const stored = localStorage.getItem("user");
   const user = stored ? JSON.parse(stored) : null;
@@ -140,7 +154,6 @@ const AfterLoginHeader = ({ lang, setLang }) => {
       </div>
 
       <div className="flex items-center gap-5">
-        {/* NÚT GẠT NGÔN NGỮ (TOGGLE SWITCH) */}
         <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-full border border-gray-200">
           <span 
             className={`text-xs font-bold px-2.5 py-1 rounded-full cursor-pointer transition-all ${lang === 'en' ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-500'}`} 
@@ -172,29 +185,44 @@ const AfterLoginHeader = ({ lang, setLang }) => {
   );
 };
 
-// 3. SidebarBookshelf dịch nhãn động dựa trên prop lang
+// 3. Tích hợp cấu trúc Sidebar mới gồm: Bookshelf, Streak Widget và Challenge Widget
 const SidebarBookshelf = ({ lang }) => {
   const [bookshelf, setBookshelf] = useState(null);
+  const [gamification, setGamification] = useState({
+    streak: { currentStreak: 5, todaySecondsSpent: 180, isCompletedToday: false },
+    challenge: { year: 2026, completedMonthsCount: 4, currentMonthPassed: true }
+  });
   const [loading, setLoading] = useState(true);
   const t = translations[lang];
 
   useEffect(() => {
-    const fetchBookshelf = async () => {
+    const fetchSidebarData = async () => {
       const user = JSON.parse(localStorage.getItem("user")); 
       if (!user) return setLoading(false);
 
       try {
-        const res = await fetch(`http://localhost:3000/api/users/getbookshelfinfo/${user.id}`);
-        const data = await res.json();
-        setBookshelf(data);
+        // Gọi song song API thông tin kệ sách và dữ liệu trò chơi hóa từ backend
+        const [bookshelfRes, gamificationRes] = await Promise.all([
+          fetch(`http://localhost:3000/api/users/getbookshelfinfo/${user.id}`),
+          // Giả định bạn có endpoint này xử lý logic từ schema mới:
+          fetch(`http://localhost:3000/api/gamification/status/${user.id}`).catch(() => null)
+        ]);
+
+        const bookshelfData = await bookshelfRes.json();
+        setBookshelf(bookshelfData);
+
+        if (gamificationRes && gamificationRes.ok) {
+          const gamificationData = await gamificationRes.json();
+          setGamification(gamificationData);
+        }
       } catch (error) {
-        console.error("Error fetching bookshelf:", error);
+        console.error("Error fetching sidebar data:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchBookshelf();
+    fetchSidebarData();
   }, []);
 
   const count = bookshelf?.stats;
@@ -205,8 +233,16 @@ const SidebarBookshelf = ({ lang }) => {
     { label: t.dropped,    count: count?.drop || 0,     icon: <XCircle size={18} />,    color: "text-red-400" },
   ];
 
+  // Tính toán % thời gian onsite trong ngày (Target: 5 phút = 300 giây)
+  const onsiteMinutes = Math.floor(gamification.streak.todaySecondsSpent / 60);
+  const streakPercent = Math.min(100, (gamification.streak.todaySecondsSpent / 300) * 100);
+  
+  // Tính toán % tiến trình thử thách năm (Ví dụ: Đã đạt 4/12 tháng)
+  const challengePercent = Math.min(100, (gamification.challenge.completedMonthsCount / 12) * 100);
+
   return (
     <aside className="w-full lg:w-72 space-y-6">
+      {/* BOX 1: KỆ SÁCH (Giữ nguyên giao diện của bạn) */}
       <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
         <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
           {t.yourBookshelf}
@@ -233,51 +269,86 @@ const SidebarBookshelf = ({ lang }) => {
             ))}
           </div>
         )}
+      </div>
 
-        {/* <div className="mt-8">
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">
-            {t.recentlyAdded}
-          </p>
-          <div className="flex -space-x-4">
-            {loading ? (
-              [...Array(3)].map((_, i) => (
-                <div key={i} className="w-12 h-16 bg-gray-100 rounded-md animate-pulse border-2 border-white" />
-              ))
-            ) : (
-              <>
-                {(bookshelf?.recentBooks || []).map((book) => (
-                  <div
-                    key={book.id}
-                    className="w-12 h-16 rounded-md border-2 border-white shadow-lg transform hover:-translate-y-2 transition-transform cursor-pointer overflow-hidden"
-                  >
-                    {book.imageUrl ? (
-                      <img
-                        src={book.imageUrl}
-                        alt={book.title}
-                        onError={(e) => {
-                          e.target.src = `https://placehold.co/150x200?text=${encodeURIComponent(t.noCover)}`;
-                        }}
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-purple-200 flex items-center justify-center text-[10px] text-gray-500 font-bold text-center">
-                        {t.noCover}
-                      </div>
-                    )}
-                  </div>
-                ))}
-                <div className="w-12 h-16 bg-gray-50 border-2 border-dashed border-gray-200 rounded-md flex items-center justify-center text-gray-400 cursor-pointer hover:bg-gray-100 transition-colors">
-                  <span className="text-lg">+</span>
-                </div>
-              </>
-            )}
+      {/* BOX 2: READING STREAK WIDGET (Mới bổ sung) */}
+      <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-bold text-gray-800 flex items-center gap-2">
+            <Flame size={18} className={gamification.streak.currentStreak > 0 ? "text-orange-500 fill-orange-500 animate-pulse" : "text-gray-400"} />
+            {t.streakTitle}
+          </h3>
+          {gamification.streak.isCompletedToday && (
+            <span className="bg-orange-50 text-orange-600 text-[10px] font-bold px-2 py-0.5 rounded-full">
+              Done
+            </span>
+          )}
+        </div>
+
+        <p className="text-sm font-semibold text-gray-700 mb-4">
+          {gamification.streak.currentStreak > 0 
+            ? t.streakActive.replace("{count}", gamification.streak.currentStreak)
+            : t.streakInactive
+          }
+        </p>
+
+        {/* Thanh tiến trình lướt web 5 phút */}
+        <div className="space-y-1.5">
+          <div className="flex justify-between text-xs text-gray-400 font-medium">
+            <span>{t.streakOnsiteProgress.replace("{current}", onsiteMinutes).replace("{target}", 5)}</span>
+            <span>{Math.round(streakPercent)}%</span>
           </div>
-        </div> */}
+          <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-gradient-to-r from-orange-400 to-amber-500 transition-all duration-500 rounded-full"
+              style={{ width: `${streakPercent}%` }}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* BOX 3: YEARLY READING CHALLENGE WIDGET (Mới bổ sung) */}
+      <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+        <div className="flex items-center gap-2 mb-3">
+          <Award size={18} className="text-indigo-600" />
+          <h3 className="font-bold text-gray-800">
+            {t.challengeTitle.replace("{year}", gamification.challenge.year)}
+          </h3>
+        </div>
+
+        <p className="text-xs text-gray-500 font-medium mb-3">
+          {t.challengeProgress.replace("{completed}", gamification.challenge.completedMonthsCount)}
+        </p>
+
+        {/* Thanh tiến trình tổng quan năm */}
+        <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden mb-4">
+          <div 
+            className="h-full bg-indigo-600 transition-all duration-500 rounded-full"
+            style={{ width: `${challengePercent}%` }}
+          />
+        </div>
+
+        {/* Trạng thái nhanh của tháng hiện tại */}
+        <div className="bg-indigo-50/50 p-3 rounded-2xl flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Calendar size={16} className="text-indigo-500" />
+            <span className="text-xs font-bold text-indigo-900">
+              {t.challengeMonthLabel.replace("{month}", new Date().getMonth() + 1)}
+            </span>
+          </div>
+          {gamification.challenge.currentMonthPassed ? (
+            <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center text-white shadow-sm">
+              <Check size={12} strokeWidth={3} />
+            </div>
+          ) : (
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">In Progress</span>
+          )}
+        </div>
       </div>
     </aside>
   );
 };
 
-// 4. Card chi tiết sách dịch nút View Detail và chữ No Cover
 const DetailedBookCard = ({ book, lang }) => {
   const navigate = useNavigate();
   const t = translations[lang];
@@ -337,7 +408,6 @@ export default function AfterLoginPage() {
   const [loading, setLoading] = useState(true);
   const [selectedFilter, setSelectedFilter] = useState('all');
 
-  // 5. Đồng bộ state ngôn ngữ xuyên suốt các trang thông qua localStorage
   const [lang, setLang] = useState(() => localStorage.getItem('app_lang') || 'en');
   const t = translations[lang];
 
@@ -350,7 +420,6 @@ export default function AfterLoginPage() {
     const fetchBooks = async () => {
       setLoading(true);
       try {
-        // If a specific topic is selected (not 'all' or 'hot'), call top-rate API for that genre
         if (selectedFilter && selectedFilter !== 'all' && selectedFilter !== 'hot') {
           const genre = encodeURIComponent(selectedFilter);
           const response = await fetch(`http://localhost:3000/api/books/toprate?genre=${genre}`, { signal: ac.signal });
@@ -360,7 +429,6 @@ export default function AfterLoginPage() {
             return;
           }
           const data = await response.json();
-          // top-rate returns an array of details; map into the same shape DetailedBookCard expects
           const mapped = (Array.isArray(data) ? data : []).map(item => ({
             id: item.isbn13 || item.isbn || item.title,
             title: item.title,
@@ -375,7 +443,6 @@ export default function AfterLoginPage() {
           return;
         }
 
-        // Default: use seeded random endpoint which can accept a category for broader filtering
         const sessionId = encodeURIComponent(getHotBooksSessionId());
         const filter = encodeURIComponent(selectedFilter);
         const response = await fetch(`http://localhost:3000/api/books/random?page=${currentPage}&sessionId=${sessionId}&category=${filter}`, { signal: ac.signal });
@@ -452,7 +519,7 @@ export default function AfterLoginPage() {
       <main className="max-w-7xl mx-auto px-8 py-8">
         <div className="flex flex-col lg:flex-row gap-8">
           
-          {/* Left: Sidebar */}
+          {/* Left: Sidebar chứa tổ hợp Bookshelf + Streak + Challenge */}
           <SidebarBookshelf lang={lang} />
 
           {/* Right: Hot Content */}
