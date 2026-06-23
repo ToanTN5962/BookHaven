@@ -41,6 +41,7 @@ const translations = {
     recentBooks: "Recent Books",
     newUsers: "New Users",
     viewAll: "View all",
+    viewAsUser: "View as User",
     allBooks: "All Books",
     noBooks: "No books found.",
     all: "All",
@@ -80,6 +81,7 @@ const translations = {
     recentBooks: "Sách mới thêm gần đây",
     newUsers: "Thành viên mới",
     viewAll: "Xem tất cả",
+    viewAsUser: "Xem dưới vai trò Người dùng",
     allBooks: "Tất cả sách",
     noBooks: "Không tìm thấy cuốn sách nào.",
     all: "Tất cả",
@@ -442,6 +444,13 @@ export default function AdminDashboard() {
               className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-colors shadow-md shadow-indigo-200"
             >
               <Plus size={15} /> {t.addBook}
+            </button>
+            <button
+              onClick={() => navigate('/afterlogin')}
+              title={t.viewAsUser}
+              className="flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-sm font-semibold rounded-xl transition-colors"
+            >
+              {t.viewAsUser}
             </button>
             <button className="relative p-2 bg-gray-50 border border-gray-200 rounded-xl text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors">
               <Bell size={18} />

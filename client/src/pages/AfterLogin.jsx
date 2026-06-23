@@ -5,6 +5,7 @@ import NotificationBell from '../components/NotificationBell';
 import { 
   Search, User, ChevronDown, BookOpen, 
   CheckCircle, Bookmark, XCircle, ChevronLeft, ChevronRight, Star,
+  ShieldCheck,
   Flame, Calendar, Award, Check
 } from 'lucide-react';
 
@@ -170,6 +171,16 @@ const AfterLoginHeader = ({ lang, setLang }) => {
         </div>
 
         <NotificationBell />
+        {user?.role === 'ADMIN' && (
+          <button
+            onClick={() => navigate('/admin')}
+            title="Admin dashboard"
+            className="flex items-center gap-2 px-3 py-1 bg-gray-50 border border-gray-200 rounded-full text-sm font-semibold hover:bg-gray-100 transition-colors"
+          >
+            <ShieldCheck size={16} className="text-indigo-600" />
+            <span className="hidden sm:inline text-sm font-medium text-gray-700">Admin</span>
+          </button>
+        )}
         <button 
           className="flex items-center gap-2 p-1 pr-3 hover:bg-gray-100 rounded-full transition-all border border-gray-100"
           onClick={() => navigate("/profile")}
@@ -202,18 +213,40 @@ const SidebarBookshelf = ({ lang }) => {
 
       try {
         // Gọi song song API thông tin kệ sách và dữ liệu trò chơi hóa từ backend
+        const token = localStorage.getItem('token');
+
         const [bookshelfRes, gamificationRes] = await Promise.all([
-          fetch(`http://localhost:3000/api/users/getbookshelfinfo/${user.id}`),
-          // Giả định bạn có endpoint này xử lý logic từ schema mới:
-          fetch(`http://localhost:3000/api/gamification/status/${user.id}`).catch(() => null)
+          fetch(`http://localhost:3000/api/users/getbookshelfinfo/${user.id}`, {
+            headers: { 'Authorization': token ? `Bearer ${token}` : '' }
+          }),
+          // Gọi API gamification có middleware verifyToken => cần thêm header Authorization
+          fetch(`http://localhost:3000/api/gamification/status/${user.id}`, {
+            headers: { 'Authorization': token ? `Bearer ${token}` : '' }
+          }).catch(() => null)
         ]);
 
         const bookshelfData = await bookshelfRes.json();
         setBookshelf(bookshelfData);
 
         if (gamificationRes && gamificationRes.ok) {
-          const gamificationData = await gamificationRes.json();
-          setGamification(gamificationData);
+          const gamificationJson = await gamificationRes.json();
+          // Backend trả { success: true, data: { streak, challenge, ... } }
+          const gd = gamificationJson && gamificationJson.data ? gamificationJson.data : null;
+          if (gd) {
+            const mapped = {
+              streak: {
+                currentStreak: gd.streak?.currentStreak || 0,
+                todaySecondsSpent: gd.streak?.todaySecondsSpent || 0,
+                isCompletedToday: gd.streak?.isCompletedToday || false
+              },
+              challenge: {
+                year: gd.challenge?.year || new Date().getFullYear(),
+                completedMonthsCount: (gd.challenge?.allMonthsProgress || []).filter(m => m.isMonthPassed).length,
+                currentMonthPassed: gd.challenge?.currentMonthProgress?.isMonthPassed || false
+              }
+            };
+            setGamification(mapped);
+          }
         }
       } catch (error) {
         console.error("Error fetching sidebar data:", error);
@@ -354,7 +387,7 @@ const DetailedBookCard = ({ book, lang }) => {
   const t = translations[lang];
 
   return (
-    <div className="flex gap-6 bg-white p-5 rounded-3xl border border-gray-100 hover:shadow-xl transition-all group cursor-pointer" onClick={() => navigate(`/books/${book.id}`)}>
+    <div className="flex gap-6 bg-white p-5 rounded-3xl border border-gray-100 hover:shadow-xl transition-all group cursor-pointer">
       <div className="w-32 h-44 bg-gray-200 rounded-xl overflow-hidden flex-shrink-0 shadow-md">
         {book.thumbnail ? (
           <img
@@ -379,11 +412,11 @@ const DetailedBookCard = ({ book, lang }) => {
             <span className="text-xs font-bold text-yellow-700">{book.rating}</span>
           </div>
         </div>
-        
+
         <p className="text-gray-500 text-sm leading-relaxed mb-4 line-clamp-3">
           {book.summary}
         </p>
-        
+
         <div className="mt-auto flex items-center justify-between">
           <div className="flex gap-2">
             {(book.tags || []).map((tag, i) => (
@@ -392,7 +425,10 @@ const DetailedBookCard = ({ book, lang }) => {
               </span>
             ))}
           </div>
-          <button className="text-sm font-bold text-indigo-600 hover:underline">
+          <button
+            onClick={() => navigate(`/books/${book.id}`)}
+            className="text-sm font-bold text-indigo-600 hover:underline"
+          >
             {t.viewDetail}
           </button>
         </div>
