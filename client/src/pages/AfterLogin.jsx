@@ -40,17 +40,14 @@ const translations = {
     filters: {
       all: "All Books",
       hot: "Hot Books",
-      technology: "Technology",
-      science: "Science",
-      literature: "Literature",
       business: "Business",
-      fantasy: "Fantasy",
-      romance: "Romance",
-      mystery: "Mystery",
-      history: "History",
-      selfHelp: "Self Help",
+      science: "Science",
+      fiction: "Fiction (Novel)",
+      nonfiction: "Nonfiction",
+      children: "Children's Books",
       youngAdult: "Young Adult",
-      children: "Children"
+      graphic: "Graphic Books & Manga",
+      audio: "Audio Fiction"
     }
   },
   vi: {
@@ -82,17 +79,14 @@ const translations = {
     filters: {
       all: "Tất cả sách",
       hot: "Sách hot",
-      technology: "Công nghệ",
-      science: "Khoa học",
-      literature: "Văn học",
       business: "Kinh doanh",
-      fantasy: "Kỳ ảo",
-      romance: "Lãng mạn",
-      mystery: "Bí ẩn",
-      history: "Lịch sử",
-      selfHelp: "Tự lực",
+      science: "Khoa học",
+      fiction: "Tiểu thuyết (Hư cấu)",
+      nonfiction: "Phi hư cấu (Thực tế)",
+      children: "Sách thiếu nhi",
       youngAdult: "Thanh thiếu niên",
-      children: "Thiếu nhi"
+      graphic: "Truyện tranh & Manga",
+      audio: "Sách nói (Hư cấu)"
     }
   }
 };
@@ -100,17 +94,14 @@ const translations = {
 const bookFilterOptions = [
   { value: 'all', labelKey: 'all' },
   { value: 'hot', labelKey: 'hot' },
-  { value: 'technology', labelKey: 'technology' },
-  { value: 'science', labelKey: 'science' },
-  { value: 'literature', labelKey: 'literature' },
-  { value: 'business', labelKey: 'business' },
-  { value: 'fantasy', labelKey: 'fantasy' },
-  { value: 'romance', labelKey: 'romance' },
-  { value: 'mystery', labelKey: 'mystery' },
-  { value: 'history', labelKey: 'history' },
-  { value: 'self-help', labelKey: 'selfHelp' },
-  { value: 'young-adult', labelKey: 'youngAdult' },
-  { value: 'children', labelKey: 'children' },
+  { value: 'business', labelKey: 'business' },    
+  { value: 'science', labelKey: 'science' },      
+  { value: 'fiction', labelKey: 'fiction' },       
+  { value: 'nonfiction', labelKey: 'nonfiction' }, 
+  { value: 'children', labelKey: 'children' },    
+  { value: 'young-adult', labelKey: 'youngAdult' }, 
+  { value: 'graphic', labelKey: 'graphic' },   
+  { value: 'audio', labelKey: 'audio' },        
 ];
 
 const AfterLoginHeader = ({ lang, setLang }) => {

@@ -660,37 +660,49 @@ const getTopRated = async(req, res) => {
             });
 
             if (!matchedList) {
-                return res.status(404).json({ message: 'Genre not found' });
+                // Thay vì trả về 404 khiến FE bị crash, trả về mảng rỗng để giao diện hiển thị "No books found" mượt mà
+                return res.status(200).json([]);
             }
 
-            const book = matchedList.books[0];
-            const isbn13 = book?.primary_isbn13 || book?.isbns?.[0]?.isbn13;
+            // Lấy toàn bộ danh sách sách thuộc thể loại này (Thường NYT trả về từ 5 - 15 cuốn một danh mục)
+            const booksInList = matchedList.books || [];
 
-            let googleBook = null;
-            try {
-                if (isbn13) {
-                    const gRes = await fetch(
-                        `https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn13}&key=${process.env.GOOGLE_BOOKS_API_KEY}`
-                    );
-                    const gData = await gRes.json();
-                    googleBook = gData.items?.[0]?.volumeInfo;
-                }
-            } catch (e) { /* ignore google lookup failures */ }
+            // Duyệt qua tất cả sách để lấy thông tin chi tiết từ Google Books API
+            const enrichedBooks = await Promise.all(
+                booksInList.map(async (book) => {
+                    const isbn13 = book?.primary_isbn13 || book?.isbns?.[0]?.isbn13;
+                    let googleBook = null;
 
-            const detail = {
-                genre: matchedList.list_name,
-                title: book.title,
-                author: book.author,
-                cover: normalizeImageUrl(book.book_image),
-                isbn13: book.primary_isbn13,
-                rating: googleBook?.averageRating,
-                ratingsCount: googleBook?.ratingsCount,
-                pageCount: googleBook?.pageCount,
-                publishedDate: googleBook?.publishedDate,
-                categories: googleBook?.categories,
-            };
+                    try {
+                        if (isbn13) {
+                            const gRes = await fetch(
+                                `https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn13}&key=${process.env.GOOGLE_BOOKS_API_KEY}`
+                            );
+                            const gData = await gRes.json();
+                            googleBook = gData.items?.[0]?.volumeInfo;
+                        }
+                    } catch (e) { 
+                        /* Cứ bỏ qua nếu Google API lỗi để tránh làm sập cả danh sách */ 
+                    }
 
-            return res.status(200).json([detail]);
+                    return {
+                        genre: matchedList.list_name,
+                        title: book.title,
+                        author: book.author,
+                        cover: normalizeImageUrl(book.book_image),
+                        isbn13: book.primary_isbn13 || isbn13,
+                        summary: googleBook?.description || book.description || '', // Bổ sung tóm tắt từ Google hoặc NYT
+                        rating: googleBook?.averageRating || 'N/A',
+                        ratingsCount: googleBook?.ratingsCount || 0,
+                        pageCount: googleBook?.pageCount || 'N/A',
+                        publishedDate: googleBook?.publishedDate,
+                        categories: googleBook?.categories || [matchedList.list_name],
+                    };
+                })
+            );
+
+            // Trả về toàn bộ danh sách sách đã được làm sạch cho Frontend
+            return res.status(200).json(enrichedBooks);
         }
 
         //Lay cuốn sách hot nhất của mỗi thể loại (default behavior)
