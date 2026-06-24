@@ -258,6 +258,48 @@ const SidebarBookshelf = ({ lang }) => {
     fetchSidebarData();
   }, []);
 
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem("user"));
+    const token = localStorage.getItem('token');
+    if (!user || !token) return;
+
+    const PING_INTERVAL = 30000; // 30 giây gửi 1 lần
+
+    const intervalId = setInterval(async () => {
+      try {
+        const response = await fetch(`http://localhost:3000/api/gamification/track-time`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({ secondsSpent: PING_INTERVAL / 1000 }) // Gửi đi số giây (30)
+        });
+
+        if (response.ok) {
+          const resJson = await response.json();
+          // Cập nhật lại state cục bộ ngay lập tức để Sidebar nhận dữ liệu mới để tăng thanh tiến độ
+          setGamification(prev => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              streak: {
+                currentStreak: resJson.data.currentStreak,
+                todaySecondsSpent: resJson.data.todaySecondsSpent,
+                isCompletedToday: resJson.data.isCompletedToday
+              }
+            };
+          });
+        }
+      } catch (error) {
+        console.error("Không thể cập nhật thời gian hoạt động:", error);
+      }
+    }, PING_INTERVAL);
+
+    // Dọn dẹp bộ đếm khi user đăng xuất hoặc đóng ứng dụng
+    return () => clearInterval(intervalId);
+  }, []);
+
   const count = bookshelf?.stats;
   const stats = [
     { label: t.reading,    count: count?.reading || 0,  icon: <BookOpen size={18} />,   color: "text-blue-500" },
@@ -387,7 +429,7 @@ const DetailedBookCard = ({ book, lang }) => {
   const t = translations[lang];
 
   return (
-    <div className="flex gap-6 bg-white p-5 rounded-3xl border border-gray-100 hover:shadow-xl transition-all group cursor-pointer">
+    <div onClick={() => navigate(`/books/${book.id}`)} className="flex gap-6 bg-white p-5 rounded-3xl border border-gray-100 hover:shadow-xl transition-all group cursor-pointer">
       <div className="w-32 h-44 bg-gray-200 rounded-xl overflow-hidden flex-shrink-0 shadow-md">
         {book.thumbnail ? (
           <img

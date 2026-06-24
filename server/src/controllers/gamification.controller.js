@@ -125,6 +125,118 @@ const getGamificationStatus = async (req, res) => {
   }
 };
 
+const trackUserActiveTime = async (req, res) => {
+  try {
+    const userId = Number(req.user.sub);
+    const { secondsSpent } = req.body;
+
+    const now = new Date();
+    // Khởi tạo mốc 00:00:00 của ngày hôm nay để so sánh ngày dương lịch
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    // 1. Tìm bản ghi streak hiện tại của user
+    const currentStreakRecord = await prisma.userStreak.findUnique({
+      where: { userId: userId }
+    });
+
+    // TRƯỜNG HỢP 1: User mới hoàn toàn (Chưa từng có bản ghi streak nào)
+    if (!currentStreakRecord) {
+      const isCompletedNow = Number(secondsSpent) >= 300;
+      
+      const newStreak = await prisma.userStreak.create({
+        data: {
+          userId: userId,
+          currentStreak: isCompletedNow ? 1 : 0, 
+          longestStreak: isCompletedNow ? 1 : 0,
+          todaySecondsSpent: Number(secondsSpent),
+          lastActiveDate: now,
+        }
+      });
+      return res.status(200).json({ success: true, data: { ...newStreak, isCompletedToday: isCompletedNow } });
+    }
+
+    // TRƯỜNG HỢP 2: Đã có dữ liệu cũ, tính toán khoảng cách ngày
+    const lastActive = new Date(currentStreakRecord.lastActiveDate);
+    const lastActiveStart = new Date(lastActive.getFullYear(), lastActive.getMonth(), lastActive.getDate());
+
+    const diffTime = todayStart.getTime() - lastActiveStart.getTime();
+    const diffDays = diffTime / (1000 * 60 * 60 * 24);
+
+    let updatedData = {};
+    
+    // Biến tạm để tính toán logic streak mới
+    let currentSeconds = currentStreakRecord.todaySecondsSpent;
+    let currentStreak = currentStreakRecord.currentStreak;
+    let longestStreak = currentStreakRecord.longestStreak;
+
+    if (diffDays === 0) {
+      // A. VẪN TRONG CÙNG MỘT NGÀY
+      const wasCompletedBefore = currentSeconds >= 300; // Trước lượt ping này đã đủ 300s chưa?
+      currentSeconds += Number(secondsSpent);           // Cộng thêm giây mới lướt
+      const isCompletedNow = currentSeconds >= 300;     // Sau lượt ping này đã đủ 300s chưa?
+
+      // NẾU TRƯỚC ĐÓ CHƯA ĐỦ MÀ BÂY GIỜ ĐỦ -> TĂNG STREAK NGAY LẬP TỨC
+      if (!wasCompletedBefore && isCompletedNow) {
+        currentStreak += 1;
+      }
+      
+      updatedData = {
+        todaySecondsSpent: currentSeconds,
+        currentStreak: currentStreak,
+        lastActiveDate: now,
+      };
+
+    } else {
+      // B. ĐÃ SANG NGÀY MỚI (diffDays === 1 hoặc nhiều hơn)
+      const isYesterdayCompleted = currentSeconds >= 300;
+
+      // Nếu ngày hôm qua CHƯA hoàn thành mục tiêu (hoặc bỏ bẵng nhiều ngày) -> Đứt chuỗi, reset streak về 0
+      if (!isYesterdayCompleted || diffDays > 1) {
+        currentStreak = 0; 
+      }
+
+      // Khởi tạo số giây của ngày mới bằng chính số giây vừa gửi lên
+      currentSeconds = Number(secondsSpent);
+      const isCompletedNow = currentSeconds >= 300;
+
+      if (isCompletedNow) {
+        currentStreak += 1;
+      }
+
+      updatedData = {
+        todaySecondsSpent: currentSeconds,
+        currentStreak: currentStreak,
+        lastActiveDate: now,
+      };
+    }
+
+    // Cập nhật kỷ lục chuỗi ngày dài nhất (longestStreak) nếu có
+    if (currentStreak > longestStreak) {
+      updatedData.longestStreak = currentStreak;
+    }
+
+    // 2. Tiến hành lưu dữ liệu mới cập nhật vào Database
+    const finalStreak = await prisma.userStreak.update({
+      where: { userId: userId },
+      data: updatedData,
+    });
+
+    // 3. Trả về kết quả sạch đẹp cho Front-end update UI
+    return res.status(200).json({
+      success: true,
+      data: {
+        ...finalStreak,
+        isCompletedToday: finalStreak.todaySecondsSpent >= 300
+      }
+    });
+
+  } catch (error) {
+    console.error("Lỗi cập nhật streak:", error);
+    return res.status(500).json({ success: false, message: "Lỗi hệ thống." });
+  }
+};
+
 module.exports = {
   getGamificationStatus,
+  trackUserActiveTime
 };

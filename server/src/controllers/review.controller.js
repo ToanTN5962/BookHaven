@@ -165,7 +165,29 @@ const getReviewsForBook = async (req, res) => {
                 else where.bookIsbn = String(bookId);
             }
         } else if (bookIsbn) {
-            where.bookIsbn = String(bookIsbn);
+            // Try to resolve the provided bookIsbn string to a local book first
+            const normalized = String(bookIsbn || '').replace(/-/g, '').trim();
+            let resolvedBook = null;
+            try {
+                // try matching by exact bookIsbn or normalized isbn
+                resolvedBook = await prisma.book.findFirst({
+                    where: {
+                        OR: [
+                            { bookIsbn: String(bookIsbn) },
+                            { bookIsbn: normalized }
+                        ]
+                    }
+                });
+            } catch (e) {
+                // ignore resolution errors
+            }
+
+            if (resolvedBook) {
+                where.bookId = resolvedBook.id;
+            } else {
+                // fallback to matching by the provided bookIsbn string
+                where.bookIsbn = String(bookIsbn);
+            }
         }
 
         // include likes and user
