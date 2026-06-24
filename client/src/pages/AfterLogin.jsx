@@ -9,7 +9,7 @@ import {
   Flame, Calendar, Award, Check
 } from 'lucide-react';
 
-// 1. Cập nhật Kho dữ liệu ngôn ngữ (Đã thêm cụm từ cho Streak và Challenge)
+// 1. Kho dữ liệu ngôn ngữ
 const translations = {
   en: {
     myLibrary: "My Library",
@@ -196,109 +196,9 @@ const AfterLoginHeader = ({ lang, setLang }) => {
   );
 };
 
-// 3. Tích hợp cấu trúc Sidebar mới gồm: Bookshelf, Streak Widget và Challenge Widget
-const SidebarBookshelf = ({ lang }) => {
-  const [bookshelf, setBookshelf] = useState(null);
-  const [gamification, setGamification] = useState({
-    streak: { currentStreak: 5, todaySecondsSpent: 180, isCompletedToday: false },
-    challenge: { year: 2026, completedMonthsCount: 4, currentMonthPassed: true }
-  });
-  const [loading, setLoading] = useState(true);
+// 3. Component Sidebar nhận dữ liệu thuần túy qua props, không tự ý quản lý đếm giây nữa
+const SidebarBookshelf = ({ lang, bookshelf, gamification, loading }) => {
   const t = translations[lang];
-
-  useEffect(() => {
-    const fetchSidebarData = async () => {
-      const user = JSON.parse(localStorage.getItem("user")); 
-      if (!user) return setLoading(false);
-
-      try {
-        // Gọi song song API thông tin kệ sách và dữ liệu trò chơi hóa từ backend
-        const token = localStorage.getItem('token');
-
-        const [bookshelfRes, gamificationRes] = await Promise.all([
-          fetch(`http://localhost:3000/api/users/getbookshelfinfo/${user.id}`, {
-            headers: { 'Authorization': token ? `Bearer ${token}` : '' }
-          }),
-          // Gọi API gamification có middleware verifyToken => cần thêm header Authorization
-          fetch(`http://localhost:3000/api/gamification/status/${user.id}`, {
-            headers: { 'Authorization': token ? `Bearer ${token}` : '' }
-          }).catch(() => null)
-        ]);
-
-        const bookshelfData = await bookshelfRes.json();
-        setBookshelf(bookshelfData);
-
-        if (gamificationRes && gamificationRes.ok) {
-          const gamificationJson = await gamificationRes.json();
-          // Backend trả { success: true, data: { streak, challenge, ... } }
-          const gd = gamificationJson && gamificationJson.data ? gamificationJson.data : null;
-          if (gd) {
-            const mapped = {
-              streak: {
-                currentStreak: gd.streak?.currentStreak || 0,
-                todaySecondsSpent: gd.streak?.todaySecondsSpent || 0,
-                isCompletedToday: gd.streak?.isCompletedToday || false
-              },
-              challenge: {
-                year: gd.challenge?.year || new Date().getFullYear(),
-                completedMonthsCount: (gd.challenge?.allMonthsProgress || []).filter(m => m.isMonthPassed).length,
-                currentMonthPassed: gd.challenge?.currentMonthProgress?.isMonthPassed || false
-              }
-            };
-            setGamification(mapped);
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching sidebar data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchSidebarData();
-  }, []);
-
-  useEffect(() => {
-    const user = JSON.parse(localStorage.getItem("user"));
-    const token = localStorage.getItem('token');
-    if (!user || !token) return;
-
-    const PING_INTERVAL = 30000; // 30 giây gửi 1 lần
-
-    const intervalId = setInterval(async () => {
-      try {
-        const response = await fetch(`http://localhost:3000/api/gamification/track-time`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
-          },
-          body: JSON.stringify({ secondsSpent: PING_INTERVAL / 1000 }) // Gửi đi số giây (30)
-        });
-
-        if (response.ok) {
-          const resJson = await response.json();
-          // Cập nhật lại state cục bộ ngay lập tức để Sidebar nhận dữ liệu mới để tăng thanh tiến độ
-          setGamification(prev => {
-            if (!prev) return prev;
-            return {
-              ...prev,
-              streak: {
-                currentStreak: resJson.data.currentStreak,
-                todaySecondsSpent: resJson.data.todaySecondsSpent,
-                isCompletedToday: resJson.data.isCompletedToday
-              }
-            };
-          });
-        }
-      } catch (error) {
-        console.error("Không thể cập nhật thời gian hoạt động:", error);
-      }
-    }, PING_INTERVAL);
-
-    // Dọn dẹp bộ đếm khi user đăng xuất hoặc đóng ứng dụng
-    return () => clearInterval(intervalId);
-  }, []);
 
   const count = bookshelf?.stats;
   const stats = [
@@ -308,16 +208,22 @@ const SidebarBookshelf = ({ lang }) => {
     { label: t.dropped,    count: count?.drop || 0,     icon: <XCircle size={18} />,    color: "text-red-400" },
   ];
 
-  // Tính toán % thời gian onsite trong ngày (Target: 5 phút = 300 giây)
-  const onsiteMinutes = Math.floor(gamification.streak.todaySecondsSpent / 60);
-  const streakPercent = Math.min(100, (gamification.streak.todaySecondsSpent / 300) * 100);
+  // Tránh lỗi crash giao diện khi gamification đang null lúc đợi API nạp lần đầu
+  const currentStreak = gamification?.streak?.currentStreak || 0;
+  const todaySecondsSpent = gamification?.streak?.todaySecondsSpent || 0;
+  const isCompletedToday = gamification?.streak?.isCompletedToday || false;
   
-  // Tính toán % tiến trình thử thách năm (Ví dụ: Đã đạt 4/12 tháng)
-  const challengePercent = Math.min(100, (gamification.challenge.completedMonthsCount / 12) * 100);
+  const challengeYear = gamification?.challenge?.year || new Date().getFullYear();
+  const completedMonthsCount = gamification?.challenge?.completedMonthsCount || 0;
+  const currentMonthPassed = gamification?.challenge?.currentMonthPassed || false;
+
+  const onsiteMinutes = Math.floor(todaySecondsSpent / 60);
+  const streakPercent = Math.min(100, (todaySecondsSpent / 300) * 100);
+  const challengePercent = Math.min(100, (completedMonthsCount / 12) * 100);
 
   return (
     <aside className="w-full lg:w-72 space-y-6">
-      {/* BOX 1: KỆ SÁCH (Giữ nguyên giao diện của bạn) */}
+      {/* BOX 1: KỆ SÁCH */}
       <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
         <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
           {t.yourBookshelf}
@@ -346,28 +252,27 @@ const SidebarBookshelf = ({ lang }) => {
         )}
       </div>
 
-      {/* BOX 2: READING STREAK WIDGET (Mới bổ sung) */}
+      {/* BOX 2: READING STREAK WIDGET */}
       <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-bold text-gray-800 flex items-center gap-2">
-            <Flame size={18} className={gamification.streak.currentStreak > 0 ? "text-orange-500 fill-orange-500 animate-pulse" : "text-gray-400"} />
+            <Flame size={18} className={currentStreak > 0 ? "text-orange-500 fill-orange-500 animate-pulse" : "text-gray-400"} />
             {t.streakTitle}
           </h3>
-          {gamification.streak.isCompletedToday && (
+          {isCompletedToday && (
             <span className="bg-orange-50 text-orange-600 text-[10px] font-bold px-2 py-0.5 rounded-full">
-              Done
+              Done 🎉
             </span>
           )}
         </div>
 
         <p className="text-sm font-semibold text-gray-700 mb-4">
-          {gamification.streak.currentStreak > 0 
-            ? t.streakActive.replace("{count}", gamification.streak.currentStreak)
+          {currentStreak > 0 
+            ? t.streakActive.replace("{count}", currentStreak)
             : t.streakInactive
           }
         </p>
 
-        {/* Thanh tiến trình lướt web 5 phút */}
         <div className="space-y-1.5">
           <div className="flex justify-between text-xs text-gray-400 font-medium">
             <span>{t.streakOnsiteProgress.replace("{current}", onsiteMinutes).replace("{target}", 5)}</span>
@@ -375,27 +280,26 @@ const SidebarBookshelf = ({ lang }) => {
           </div>
           <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
             <div 
-              className="h-full bg-gradient-to-r from-orange-400 to-amber-500 transition-all duration-500 rounded-full"
+              className="h-full bg-gradient-to-r from-orange-400 to-amber-500 transition-all duration-300 rounded-full"
               style={{ width: `${streakPercent}%` }}
             />
           </div>
         </div>
       </div>
 
-      {/* BOX 3: YEARLY READING CHALLENGE WIDGET (Mới bổ sung) */}
+      {/* BOX 3: YEARLY READING CHALLENGE WIDGET */}
       <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
         <div className="flex items-center gap-2 mb-3">
           <Award size={18} className="text-indigo-600" />
           <h3 className="font-bold text-gray-800">
-            {t.challengeTitle.replace("{year}", gamification.challenge.year)}
+            {t.challengeTitle.replace("{year}", challengeYear)}
           </h3>
         </div>
 
         <p className="text-xs text-gray-500 font-medium mb-3">
-          {t.challengeProgress.replace("{completed}", gamification.challenge.completedMonthsCount)}
+          {t.challengeProgress.replace("{completed}", completedMonthsCount)}
         </p>
 
-        {/* Thanh tiến trình tổng quan năm */}
         <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden mb-4">
           <div 
             className="h-full bg-indigo-600 transition-all duration-500 rounded-full"
@@ -403,7 +307,6 @@ const SidebarBookshelf = ({ lang }) => {
           />
         </div>
 
-        {/* Trạng thái nhanh của tháng hiện tại */}
         <div className="bg-indigo-50/50 p-3 rounded-2xl flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Calendar size={16} className="text-indigo-500" />
@@ -411,7 +314,7 @@ const SidebarBookshelf = ({ lang }) => {
               {t.challengeMonthLabel.replace("{month}", new Date().getMonth() + 1)}
             </span>
           </div>
-          {gamification.challenge.currentMonthPassed ? (
+          {currentMonthPassed ? (
             <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center text-white shadow-sm">
               <Check size={12} strokeWidth={3} />
             </div>
@@ -484,7 +387,12 @@ export default function AfterLoginPage() {
   const [books, setBooks] = useState([]);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [sidebarLoading, setSidebarLoading] = useState(true);
   const [selectedFilter, setSelectedFilter] = useState('all');
+
+  const [bookshelf, setBookshelf] = useState(null);
+  // Khởi tạo state gamification ban đầu là null để đợi nạp dữ liệu sạch từ DB
+  const [gamification, setGamification] = useState(null);
 
   const [lang, setLang] = useState(() => localStorage.getItem('app_lang') || 'en');
   const t = translations[lang];
@@ -493,6 +401,97 @@ export default function AfterLoginPage() {
     localStorage.setItem('app_lang', lang);
   }, [lang]);
 
+  // 1. useEffect: Tải toàn bộ dữ liệu Sidebar (Kệ sách + Trạng thái Gamification gốc từ DB)
+  useEffect(() => {
+    const fetchSidebarData = async () => {
+      const user = JSON.parse(localStorage.getItem("user")); 
+      if (!user) return setSidebarLoading(false);
+
+      try {
+        const token = localStorage.getItem('token');
+        const [bookshelfRes, gamificationRes] = await Promise.all([
+          fetch(`http://localhost:3000/api/users/getbookshelfinfo/${user.id}`, {
+            headers: { 'Authorization': token ? `Bearer ${token}` : '' }
+          }),
+          fetch(`http://localhost:3000/api/gamification/status/${user.id}`, {
+            headers: { 'Authorization': token ? `Bearer ${token}` : '' }
+          }).catch(() => null)
+        ]);
+
+        const bookshelfData = await bookshelfRes.json();
+        setBookshelf(bookshelfData);
+
+        if (gamificationRes && gamificationRes.ok) {
+          const gamificationJson = await gamificationRes.json();
+          const gd = gamificationJson?.data;
+          if (gd) {
+            setGamification({
+              streak: {
+                currentStreak: gd.streak?.currentStreak || 0,
+                todaySecondsSpent: gd.streak?.todaySecondsSpent || 0,
+                isCompletedToday: gd.streak?.todaySecondsSpent >= 300
+              },
+              challenge: {
+                year: gd.challenge?.year || new Date().getFullYear(),
+                completedMonthsCount: (gd.challenge?.allMonthsProgress || []).filter(m => m.isMonthPassed).length,
+                currentMonthPassed: gd.challenge?.currentMonthProgress?.isMonthPassed || false
+              }
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching sidebar data:", error);
+      } finally {
+        setSidebarLoading(false);
+      }
+    };
+
+    fetchSidebarData();
+  }, []);
+
+  // 2. useEffect: Bộ đếm thời gian chạy ngầm 30s ping lên server một lần
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem("user"));
+    const token = localStorage.getItem('token');
+    if (!user || !token) return;
+
+    const PING_INTERVAL = 30000; 
+
+    const intervalId = setInterval(async () => {
+      try {
+        const response = await fetch(`http://localhost:3000/api/gamification/track-time`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({ secondsSpent: PING_INTERVAL / 1000 })
+        });
+
+        if (response.ok) {
+          const resJson = await response.json();
+          // Cập nhật state an toàn nhờ Guard Clause chặn giá trị null
+          setGamification(prev => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              streak: {
+                currentStreak: resJson.data.currentStreak,
+                todaySecondsSpent: resJson.data.todaySecondsSpent,
+                isCompletedToday: resJson.data.todaySecondsSpent >= 300
+              }
+            };
+          });
+        }
+      } catch (error) {
+        console.error("Không thể cập nhật thời gian hoạt động:", error);
+      }
+    }, PING_INTERVAL);
+
+    return () => clearInterval(intervalId);
+  }, []);
+
+  // 3. useEffect: Tải danh sách sách khám phá (Giữ nguyên logic của bạn)
   useEffect(() => {
     let ac = new AbortController();
     const fetchBooks = async () => {
@@ -597,8 +596,13 @@ export default function AfterLoginPage() {
       <main className="max-w-7xl mx-auto px-8 py-8">
         <div className="flex flex-col lg:flex-row gap-8">
           
-          {/* Left: Sidebar chứa tổ hợp Bookshelf + Streak + Challenge */}
-          <SidebarBookshelf lang={lang} />
+          {/* Left: Sidebar nhận State dữ liệu từ cha đưa xuống */}
+          <SidebarBookshelf 
+            lang={lang} 
+            bookshelf={bookshelf} 
+            gamification={gamification} 
+            loading={sidebarLoading} 
+          />
 
           {/* Right: Hot Content */}
           <section className="flex-1">
